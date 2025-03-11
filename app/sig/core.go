@@ -7,6 +7,7 @@ import (
 
 	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/rev"
 	"smecalculus/rolevod/lib/sym"
 
@@ -48,8 +49,15 @@ type Root struct {
 	ID    id.ADT
 	Rev   rev.ADT
 	Title string
-	CEs   []chnl.Spec
-	PE    chnl.Spec
+	Ys2   []chnl.Spec
+	X2    chnl.Spec
+	Ys    []EP
+	X     EP
+}
+
+type EP struct {
+	ChnlPH ph.ADT
+	RoleQN sym.ADT
 }
 
 type API interface {
@@ -109,8 +117,8 @@ func (s *service) Create(spec Spec) (_ Root, err error) {
 		ID:    id.New(),
 		Rev:   rev.Initial(),
 		Title: spec.FQN.Name(),
-		PE:    spec.PE,
-		CEs:   spec.CEs,
+		X2:    spec.PE,
+		Ys2:   spec.CEs,
 	}
 	s.operator.Explicit(ctx, func(ds data.Source) error {
 		err = s.sigs.Insert(ds, root)
@@ -162,8 +170,8 @@ type Repo interface {
 func CollectEnv(sigs []Root) []role.QN {
 	roleFQNs := []role.QN{}
 	for _, sig := range sigs {
-		roleFQNs = append(roleFQNs, sig.PE.Link)
-		for _, ce := range sig.CEs {
+		roleFQNs = append(roleFQNs, sig.X2.Link)
+		for _, ce := range sig.Ys2 {
 			roleFQNs = append(roleFQNs, ce.Link)
 		}
 	}

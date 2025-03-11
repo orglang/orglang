@@ -46,12 +46,12 @@ func ChnlID(r Root) chnl.ID { return r.step() }
 
 // aka exec.Proc
 type ProcRoot struct {
-	ID     id.ADT
-	ProcID chnl.ID
-	Term   Term
+	ID   id.ADT
+	PID  chnl.ID
+	Term Term
 }
 
-func (r ProcRoot) step() chnl.ID { return r.ProcID }
+func (r ProcRoot) step() chnl.ID { return r.PID }
 
 // aka exec.Msg
 type MsgRoot struct {
@@ -106,6 +106,11 @@ type Term interface {
 	Via() ph.ADT
 }
 
+type Impl interface {
+	Term
+	impl()
+}
+
 // aka ast.Msg
 type Value interface {
 	Term
@@ -113,6 +118,7 @@ type Value interface {
 }
 
 type Val interface {
+	Impl
 	val2()
 }
 
@@ -122,6 +128,7 @@ type Continuation interface {
 }
 
 type Cont interface {
+	Impl
 	cont2()
 }
 
@@ -134,18 +141,18 @@ type CloseSpec struct {
 	X ph.ADT
 }
 
-func (CloseSpec) val() {}
-
 func (s CloseSpec) Via() ph.ADT { return s.X }
+
+func (CloseSpec) val() {}
 
 type WaitSpec struct {
 	X    ph.ADT
 	Cont Term
 }
 
-func (WaitSpec) cont() {}
-
 func (s WaitSpec) Via() ph.ADT { return s.X }
+
+func (WaitSpec) cont() {}
 
 type SendSpec struct {
 	X ph.ADT // via
@@ -153,9 +160,9 @@ type SendSpec struct {
 	// Cont  Term
 }
 
-func (SendSpec) val() {}
-
 func (s SendSpec) Via() ph.ADT { return s.X }
+
+func (SendSpec) val() {}
 
 type RecvSpec struct {
 	X    ph.ADT // via
@@ -163,9 +170,9 @@ type RecvSpec struct {
 	Cont Term
 }
 
-func (RecvSpec) cont() {}
-
 func (s RecvSpec) Via() ph.ADT { return s.X }
+
+func (RecvSpec) cont() {}
 
 type LabSpec struct {
 	X ph.ADT
@@ -173,27 +180,27 @@ type LabSpec struct {
 	// Cont Term
 }
 
-func (LabSpec) val() {}
-
 func (s LabSpec) Via() ph.ADT { return s.X }
+
+func (LabSpec) val() {}
 
 type CaseSpec struct {
 	X     ph.ADT
 	Conts map[core.Label]Term
 }
 
-func (CaseSpec) cont() {}
-
 func (s CaseSpec) Via() ph.ADT { return s.X }
+
+func (CaseSpec) cont() {}
 
 type CTASpec struct {
 	AK  ak.ADT
 	Sig id.ADT
 }
 
-func (s CTASpec) act() {}
-
 func (s CTASpec) Via() ph.ADT { return s.Sig }
+
+func (s CTASpec) act() {}
 
 // aka ExpName
 type LinkSpec struct {
@@ -204,35 +211,48 @@ type LinkSpec struct {
 
 func (s LinkSpec) Via() ph.ADT { return s.PE }
 
+// аналог SendSpec, но без продолжения с новым via
 type FwdSpec struct {
-	C ph.ADT // from
-	D ph.ADT // to
+	X ph.ADT // from
+	Y ph.ADT // to
 }
+
+func (s FwdSpec) Via() ph.ADT { return s.X }
 
 func (FwdSpec) val() {}
 
 func (FwdSpec) cont() {}
 
-func (s FwdSpec) Via() ph.ADT { return s.C }
-
+// аналог балкового SendSpec
 type SpawnSpec struct {
-	PE   ph.ADT
-	CEs  []chnl.ID
-	Sig  id.ADT // TODO ссылаться по FQN
-	Pool sym.ADT
-	Cont Term
+	X      ph.ADT
+	Ys     []ph.ADT
+	Ys2    []chnl.ID
+	SigID  id.ADT // TODO ссылаться по QN
+	PoolQN sym.ADT
+	Cont   Term
 }
 
-func (s SpawnSpec) Via() ph.ADT { return s.PE }
+func (s SpawnSpec) Via() ph.ADT { return s.X }
 
 type CloseImpl struct {
+	X ph.ADT
 }
+
+func (i CloseImpl) Via() ph.ADT { return i.X }
+
+func (CloseImpl) impl() {}
 
 func (CloseImpl) val2() {}
 
 type WaitImpl struct {
+	X    ph.ADT
 	Cont Term
 }
+
+func (i WaitImpl) Via() ph.ADT { return i.X }
+
+func (WaitImpl) impl() {}
 
 func (WaitImpl) cont2() {}
 
@@ -241,6 +261,10 @@ type SendImpl struct {
 	A id.ADT
 	B id.ADT
 }
+
+func (i SendImpl) Via() ph.ADT { return i.X }
+
+func (SendImpl) impl() {}
 
 func (SendImpl) val2() {}
 
@@ -251,6 +275,10 @@ type RecvImpl struct {
 	Cont Term
 }
 
+func (i RecvImpl) Via() ph.ADT { return i.X }
+
+func (RecvImpl) impl() {}
+
 func (RecvImpl) cont2() {}
 
 type LabImpl struct {
@@ -258,6 +286,10 @@ type LabImpl struct {
 	A id.ADT
 	L core.Label
 }
+
+func (i LabImpl) Via() ph.ADT { return i.X }
+
+func (LabImpl) impl() {}
 
 func (LabImpl) val2() {}
 
@@ -267,13 +299,24 @@ type CaseImpl struct {
 	Conts map[core.Label]Term
 }
 
+func (i CaseImpl) Via() ph.ADT { return i.X }
+
+func (CaseImpl) impl() {}
+
 func (CaseImpl) cont2() {}
 
 type FwdImpl struct {
-	ChnlID id.ADT
+	X ph.ADT
+	B id.ADT // to
 }
 
+func (i FwdImpl) Via() ph.ADT { return i.X }
+
+func (FwdImpl) impl() {}
+
 func (FwdImpl) val2() {}
+
+func (FwdImpl) cont2() {}
 
 type Repo interface {
 	Insert(data.Source, ...Root) error
@@ -297,7 +340,7 @@ func collectEnvRec(t Term, env []id.ADT) []id.ADT {
 		}
 		return env
 	case SpawnSpec:
-		return collectEnvRec(term.Cont, append(env, term.Sig))
+		return collectEnvRec(term.Cont, append(env, term.SigID))
 	default:
 		return env
 	}
@@ -351,13 +394,13 @@ func collectCEsRec(pe chnl.ID, t Term, ces []chnl.ID) []chnl.ID {
 		}
 		return ces
 	case FwdSpec:
-		d, ok := term.D.(chnl.ID)
+		d, ok := term.Y.(chnl.ID)
 		if ok {
 			ces = append(ces, d)
 		}
 		return ces
 	case SpawnSpec:
-		return collectCEsRec(pe, term.Cont, append(ces, term.CEs...))
+		return collectCEsRec(pe, term.Cont, append(ces, term.Ys2...))
 	default:
 		return ces
 	}
@@ -406,6 +449,10 @@ func ErrRootTypeMismatch(got, want Root) error {
 
 func ErrTermTypeUnexpected(got Term) error {
 	return fmt.Errorf("term type unexpected: %T", got)
+}
+
+func ErrImplTypeUnexpected(got Impl) error {
+	return fmt.Errorf("impl type unexpected: %T", got)
 }
 
 func ErrTermTypeMismatch(got, want Term) error {

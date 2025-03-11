@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+var (
+	Nil ADT
+)
+
 type ADT interface {
 	PH()
 }

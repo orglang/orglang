@@ -107,7 +107,7 @@ func TestTake(t *testing.T) {
 				Link: oneRole.FQN,
 			},
 			CEs: []chnl.Spec{
-				closerSig.PE,
+				closerSig.X2,
 			},
 		}
 		waiterSig, err := sigAPI.Create(waiterSigSpec)
@@ -232,7 +232,7 @@ func TestTake(t *testing.T) {
 			},
 			CEs: []chnl.Spec{
 				lolliSigSpec.PE,
-				oneSig1.PE,
+				oneSig1.X2,
 			},
 		}
 		oneSig2, err := sigAPI.Create(oneSigSpec2)
@@ -362,7 +362,7 @@ func TestTake(t *testing.T) {
 				Link: oneRole.FQN,
 			},
 			CEs: []chnl.Spec{
-				withSig.PE,
+				withSig.X2,
 			},
 		}
 		oneSig, err := sigAPI.Create(oneSigSpec)
@@ -468,7 +468,7 @@ func TestTake(t *testing.T) {
 					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
-					oneSig1.PE,
+					oneSig1.X2,
 				},
 			},
 		)
@@ -484,7 +484,7 @@ func TestTake(t *testing.T) {
 					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
-					oneSig1.PE,
+					oneSig1.X2,
 				},
 			},
 		)
@@ -529,8 +529,8 @@ func TestTake(t *testing.T) {
 			Deal:   bigDeal.ID,
 			ProcID: spawner.ID,
 			Term: step.SpawnSpec{
-				PE: z,
-				CEs: []chnl.ID{
+				X: z,
+				Ys2: []chnl.ID{
 					injectee.ID,
 				},
 				Cont: step.WaitSpec{
@@ -539,7 +539,7 @@ func TestTake(t *testing.T) {
 						X: spawner.ID,
 					},
 				},
-				Sig: oneSig3.ID,
+				SigID: oneSig3.ID,
 			},
 		}
 		// when
@@ -585,7 +585,7 @@ func TestTake(t *testing.T) {
 					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
-					oneSig1.PE,
+					oneSig1.X2,
 				},
 			},
 		)
@@ -601,7 +601,7 @@ func TestTake(t *testing.T) {
 					Link: oneRole.FQN,
 				},
 				CEs: []chnl.Spec{
-					oneSig1.PE,
+					oneSig1.X2,
 				},
 			},
 		)
@@ -668,8 +668,8 @@ func TestTake(t *testing.T) {
 			// канал пересыльщика должен закрыться?
 			ProcID: forwarder.ID,
 			Term: step.FwdSpec{
-				C: forwarder.ID,
-				D: closer.ID,
+				X: forwarder.ID,
+				Y: closer.ID,
 			},
 		}
 		err = dealAPI.Take(fwdSpec)

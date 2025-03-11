@@ -1,6 +1,7 @@
 package proc
 
 import (
+	"fmt"
 	"smecalculus/rolevod/lib/id"
 	"smecalculus/rolevod/lib/ph"
 	"smecalculus/rolevod/lib/rev"
@@ -11,39 +12,44 @@ import (
 
 // aka Configuration
 type Snap struct {
-	PoolID id.ADT
 	ProcID id.ADT
 	Chnls  map[ph.ADT]Chnl
 	Steps  map[chnl.ID]step.Root
+	PoolID id.ADT
 	Rev    rev.ADT
 }
 
 type Chnl struct {
+	ChnlPH  ph.ADT
 	ChnlID  id.ADT
 	StateID id.ADT
-	// Provider Side
-	PS EP
-	// Client Side
-	CS EP
-}
-
-type EP struct {
+	// provider
 	PoolID id.ADT
-	ProcID id.ADT
-	Rev    rev.ADT
 }
-
-func ChnlPH(ch Chnl) ph.ADT { return ch.ChnlPH }
 
 type Lock struct {
 	PoolID id.ADT
 	Rev    rev.ADT
 }
 
+func ChnlPH(ch Chnl) ph.ADT { return ch.ChnlPH }
+
+func ChnlID(ch Chnl) id.ADT { return ch.ChnlID }
+
+// ответственность за процесс
+type Liab struct {
+	ProcID id.ADT
+	PoolID id.ADT
+	// позитивное значение при возникновении
+	// негативное значение при лишении
+	Rev rev.ADT
+}
+
 type Mod struct {
+	Locks []Lock
 	Bnds  []Bnd
 	Steps []step.Root
-	Locks []Lock
+	Liabs []Liab
 }
 
 type Bnd struct {
@@ -52,4 +58,8 @@ type Bnd struct {
 	ChnlID  id.ADT
 	StateID id.ADT
 	Rev     rev.ADT
+}
+
+func ErrMissingChnl(want ph.ADT) error {
+	return fmt.Errorf("channel missing in cfg: %v", want)
 }

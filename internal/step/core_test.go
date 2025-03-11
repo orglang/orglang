@@ -19,7 +19,7 @@ func TestCollectCtx(t *testing.T) {
 	// given
 	ce := id.New()
 	// and
-	term := SpawnSpec{CEs: []chnl.ID{ce}, Cont: CloseSpec{}}
+	term := SpawnSpec{Ys2: []chnl.ID{ce}, Cont: CloseSpec{}}
 	// when
 	actualCEs := CollectCtx(id.New(), term)
 	// then

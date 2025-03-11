@@ -11,6 +11,7 @@ import (
 	"smecalculus/rolevod/lib/core"
 	"smecalculus/rolevod/lib/data"
 	"smecalculus/rolevod/lib/id"
+	"smecalculus/rolevod/lib/rev"
 
 	"smecalculus/rolevod/internal/chnl"
 	"smecalculus/rolevod/internal/proc"
@@ -71,18 +72,18 @@ func (r *repoPgx) SelectAssets(source data.Source, poolID id.ADT) (AssetSnap, er
 func (r *repoPgx) SelectProc(source data.Source, procID id.ADT) (proc.Snap, error) {
 	ds := data.MustConform[data.SourcePgx](source)
 	idAttr := slog.Any("procID", procID)
-	epRows, err := ds.Conn.Query(ds.Ctx, selectEPs, procID.String())
+	chnlRows, err := ds.Conn.Query(ds.Ctx, selectChnls, procID.String())
 	if err != nil {
-		r.log.Error("execution failed", idAttr, slog.String("q", selectEPs))
+		r.log.Error("execution failed", idAttr, slog.String("q", selectChnls))
 		return proc.Snap{}, err
 	}
-	defer epRows.Close()
-	epDtos, err := pgx.CollectRows(epRows, pgx.RowToStructByName[epData])
+	defer chnlRows.Close()
+	chnlDtos, err := pgx.CollectRows(chnlRows, pgx.RowToStructByName[epData])
 	if err != nil {
-		r.log.Error("collection failed", idAttr, slog.Any("t", reflect.TypeOf(epDtos)))
+		r.log.Error("collection failed", idAttr, slog.Any("t", reflect.TypeOf(chnlDtos)))
 		return proc.Snap{}, err
 	}
-	eps, err := DataToEPs(epDtos)
+	chnls, err := DataToEPs(chnlDtos)
 	if err != nil {
 		r.log.Error("mapping failed", idAttr)
 		return proc.Snap{}, err
@@ -105,24 +106,23 @@ func (r *repoPgx) SelectProc(source data.Source, procID id.ADT) (proc.Snap, erro
 	}
 	r.log.Debug("selection succeeded", idAttr)
 	return proc.Snap{
-		Chnls: core.IndexBy(proc.ChnlPH, eps),
+		Chnls: core.IndexBy(proc.ChnlPH, chnls),
 		Steps: core.IndexBy(step.ChnlID, steps),
 	}, nil
 }
 
 func (r *repoPgx) UpdateProc(source data.Source, mod proc.Mod) (err error) {
 	ds := data.MustConform[data.SourcePgx](source)
-	idAttr := slog.Any("poolID", mod.PoolID)
 	dto := proc.DataFromMod(mod)
 	// bindings
 	bndReq := pgx.Batch{}
-	for _, bnd := range dto.Bnds {
+	for _, dto := range dto.Bnds {
 		args := pgx.NamedArgs{
-			"proc_id":  bnd.ProcID,
-			"proc_ph":  bnd.ProcPH,
-			"chnl_id":  bnd.ChnlID,
-			"state_id": bnd.StateID,
-			"rev":      bnd.Rev,
+			"proc_id":  dto.ProcID,
+			"chnl_ph":  dto.ChnlPH,
+			"chnl_id":  dto.ChnlID,
+			"state_id": dto.StateID,
+			"rev":      dto.Rev,
 		}
 		bndReq.Queue(insertBnd, args)
 	}
@@ -130,10 +130,10 @@ func (r *repoPgx) UpdateProc(source data.Source, mod proc.Mod) (err error) {
 	defer func() {
 		err = errors.Join(err, bndRes.Close())
 	}()
-	for _, bnd := range dto.Bnds {
+	for _, dto := range dto.Bnds {
 		_, err := bndRes.Exec()
 		if err != nil {
-			r.log.Error("execution failed", idAttr, slog.String("q", insertBnd), slog.Any("bnd", bnd))
+			r.log.Error("execution failed", slog.String("q", insertBnd), slog.Any("sto", dto))
 		}
 	}
 	if err != nil {
@@ -141,12 +141,12 @@ func (r *repoPgx) UpdateProc(source data.Source, mod proc.Mod) (err error) {
 	}
 	// steps
 	stepReq := pgx.Batch{}
-	for _, st := range dto.Steps {
+	for _, dto := range dto.Steps {
 		args := pgx.NamedArgs{
-			"proc_id": st.PID,
-			"chnl_id": st.VID,
-			"kind":    st.K,
-			"spec":    st.Spec,
+			"proc_id": dto.PID,
+			"chnl_id": dto.VID,
+			"kind":    dto.K,
+			"spec":    dto.Spec,
 		}
 		stepReq.Queue(insertStep, args)
 	}
@@ -154,31 +154,43 @@ func (r *repoPgx) UpdateProc(source data.Source, mod proc.Mod) (err error) {
 	defer func() {
 		err = errors.Join(err, bndRes.Close())
 	}()
-	for _, st := range dto.Steps {
+	for _, dto := range dto.Steps {
 		_, err := stepRes.Exec()
 		if err != nil {
-			r.log.Error("execution failed", idAttr, slog.String("q", insertStep), slog.Any("step", st))
+			r.log.Error("execution failed", slog.String("q", insertStep), slog.Any("dto", dto))
 		}
 	}
 	if err != nil {
 		return err
 	}
-	// root
-	args := pgx.NamedArgs{
-		"pool_id": dto.PoolID,
-		"rev":     dto.Rev,
-		"k":       procLock,
+	// roots
+	rootReq := pgx.Batch{}
+	for _, dto := range dto.Locks {
+		args := pgx.NamedArgs{
+			"pool_id": dto.PoolID,
+			"rev":     dto.Rev,
+			"k":       procRev,
+		}
+		rootReq.Queue(updateRoot, args)
 	}
-	ct, err := ds.Conn.Exec(ds.Ctx, updateRoot, args)
+	rootRes := ds.Conn.SendBatch(ds.Ctx, &rootReq)
+	defer func() {
+		err = errors.Join(err, rootRes.Close())
+	}()
+	for _, dto := range dto.Locks {
+		ct, err := rootRes.Exec()
+		if err != nil {
+			r.log.Error("execution failed", slog.String("q", updateRoot), slog.Any("dto", dto))
+		}
+		if ct.RowsAffected() == 0 {
+			r.log.Error("update failed")
+			return errOptimisticUpdate(rev.ADT(dto.Rev))
+		}
+	}
 	if err != nil {
-		r.log.Error("execution failed", idAttr, slog.String("q", updateRoot))
 		return err
 	}
-	if ct.RowsAffected() == 0 {
-		r.log.Error("update failed", idAttr)
-		return errOptimisticUpdate(mod.Rev)
-	}
-	r.log.Debug("update succeeded", idAttr)
+	r.log.Debug("update succeeded")
 	return nil
 }
 
@@ -364,43 +376,28 @@ const (
 		where r.pool_id = $1
 		group by r.pool_id, r.title`
 
-	selectEPs = `
+	selectChnls = `
 		with bnds as not materialized (
-			select distinct on (proc_ph)
+			select distinct on (chnl_ph)
 				*
 			from proc_bnds
 			where proc_id = 'proc1'
-			order by proc_ph, rev desc
+			order by chnl_ph, abs(rev) desc
 		), liabs as not materialized (
-			select distinct on (proc_ph)
+			select distinct on (proc_id)
 				*
 			from pool_liabs
 			where proc_id = 'proc1'
-			order by proc_ph, rev desc
-		), assets as not materialized (
-			select distinct on (proc_ph)
-				*
-			from pool_assets
-			where proc_id = 'proc1'
-			order by proc_ph, rev desc
+			order by proc_id, abs(rev) desc
 		)
 		select
 			bnd.*,
-			srv.pool_id as srv_id,
-			srv.revs as srv_revs,
-			clnt.pool_id as clnt_id,
-			clnt.revs as clnt_revs
+			prvd.pool_id
 		from bnds bnd
 		left join liabs liab
 			on liab.proc_id = bnd.proc_id
-			and liab.proc_ph = bnd.proc_ph
-		left join pool_roots srv
-			on srv.pool_id = liab.pool_id
-		left join assets asset
-			on asset.proc_id = bnd.proc_id
-			and asset.proc_ph = bnd.proc_ph
-		left join pool_roots clnt
-			on clnt.pool_id = asset.pool_id`
+		left join pool_roots prvd
+			on prvd.pool_id = liab.pool_id`
 
 	selectSteps = ``
 )

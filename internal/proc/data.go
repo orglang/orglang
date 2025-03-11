@@ -5,15 +5,19 @@ import (
 )
 
 type modData struct {
+	Locks []lockData
+	Bnds  []bndData
+	Steps []step.RootData
+}
+
+type lockData struct {
 	PoolID string
-	Bnds   []bndData
-	Steps  []step.RootData
 	Rev    int
 }
 
 type bndData struct {
 	ProcID  string
-	ProcPH  string
+	ChnlPH  string
 	ChnlID  string
 	StateID string
 	Rev     int

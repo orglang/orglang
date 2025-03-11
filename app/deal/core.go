@@ -56,15 +56,15 @@ func (e Environment) Contains(id sig.ID) bool {
 
 func (e Environment) LookupPE(id sig.ID) state.EP {
 	decl := e.sigs[id]
-	role := e.roles[decl.PE.Link]
-	return state.EP{Z: decl.PE.Link, C: e.states[role.StateID]}
+	role := e.roles[decl.X2.Link]
+	return state.EP{Z: decl.X2.Link, C: e.states[role.StateID]}
 }
 
 func (e Environment) LookupCEs(id sig.ID) []state.EP {
 	decl := e.sigs[id]
 	ces := []state.EP{}
-	for _, ce := range decl.CEs {
-		role := e.roles[decl.PE.Link]
+	for _, ce := range decl.Ys2 {
+		role := e.roles[decl.X2.Link]
 		ces = append(ces, state.EP{Z: ce.Link, C: e.states[role.StateID]})
 	}
 	return ces
@@ -200,21 +200,21 @@ func (s *service) Involve(gotSpec PartSpec) (_ chnl.Root, err error) {
 	}
 	var wantRole role.Root
 	s.operator.Implicit(ctx, func(ds data.Source) {
-		wantRole, err = s.roles.SelectByFQN(ds, wantSig.PE.Link)
+		wantRole, err = s.roles.SelectByFQN(ds, wantSig.X2.Link)
 	})
 	if err != nil {
-		s.log.Error("role selection failed", slog.Any("fqn", wantSig.PE.Link))
+		s.log.Error("role selection failed", slog.Any("fqn", wantSig.X2.Link))
 		return chnl.Root{}, err
 	}
 	newPE := chnl.Root{
 		ID:      id.New(),
-		Title:   wantSig.PE.Key,
+		Title:   wantSig.X2.Key,
 		StateID: &wantRole.StateID,
 		PoolID:  &gotSpec.Servant,
 	}
 	newProc := step.ProcRoot{
-		ID:     id.New(),
-		ProcID: newPE.ID,
+		ID:  id.New(),
+		PID: newPE.ID,
 		Term: step.CTASpec{
 			AK:  ak.New(),
 			Sig: gotSpec.Service,
@@ -305,16 +305,16 @@ func (s *service) Take(spec TranSpec) (err error) {
 	}
 	var pe chnl.Root
 	s.operator.Implicit(ctx, func(ds data.Source) {
-		pe, err = s.chnls.SelectByID(ds, proc.ProcID)
+		pe, err = s.chnls.SelectByID(ds, proc.PID)
 	})
 	if err != nil {
 		s.log.Error("taking failed", pidAttr)
 		return err
 	}
-	ceIDs := step.CollectCtx(proc.ProcID, spec.Term)
+	ceIDs := step.CollectCtx(proc.PID, spec.Term)
 	var ces []chnl.Root
 	s.operator.Implicit(ctx, func(ds data.Source) {
-		ces, err = s.chnls.SelectCtx(proc.ProcID, ceIDs)
+		ces, err = s.chnls.SelectCtx(proc.PID, ceIDs)
 	})
 	if err != nil {
 		s.log.Error("taking failed", pidAttr, slog.Any("ids", ceIDs))
@@ -349,16 +349,16 @@ func (s *service) takeProc(
 	proc step.ProcRoot,
 ) (err error) {
 	s.log.Debug("transition taking started", slog.Any("proc", proc))
-	pe, err := s.chnls.SelectByID(proc.ProcID)
+	pe, err := s.chnls.SelectByID(proc.PID)
 	if err != nil {
 		s.log.Error("providable endpoint selection failed",
 			slog.Any("reason", err),
-			slog.Any("id", proc.ProcID),
+			slog.Any("id", proc.PID),
 		)
 		return err
 	}
-	ceIDs := step.CollectCtx(proc.ProcID, proc.Term)
-	ces, err := s.chnls.SelectCtx(proc.ProcID, ceIDs)
+	ceIDs := step.CollectCtx(proc.PID, proc.Term)
+	ces, err := s.chnls.SelectCtx(proc.PID, ceIDs)
 	if err != nil {
 		s.log.Error("consumable endpoints selection failed",
 			slog.Any("reason", err),
@@ -412,7 +412,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newMsg := step.MsgRoot{
 				ID:  id.New(),
-				PID: proc.ProcID,
+				PID: proc.PID,
 				VID: curVia.ID,
 				Val: term,
 			}
@@ -460,9 +460,9 @@ func (s *service) takeProcWith(
 			return err
 		}
 		newProc := step.ProcRoot{
-			ID:     id.New(),
-			ProcID: srv.PID,
-			Term:   wait.Cont,
+			ID:   id.New(),
+			PID:  srv.PID,
+			Term: wait.Cont,
 		}
 		s.log.Debug("transition taking succeeded")
 		return s.takeProc(newProc)
@@ -494,7 +494,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newSrv := step.SrvRoot{
 				ID:   id.New(),
-				PID:  proc.ProcID,
+				PID:  proc.PID,
 				VID:  curVia.ID,
 				Cont: term,
 			}
@@ -537,33 +537,33 @@ func (s *service) takeProcWith(
 				return err
 			}
 			newProc = step.ProcRoot{
-				ID:     id.New(),
-				ProcID: proc.ProcID,
-				Term:   term.Cont,
+				ID:   id.New(),
+				PID:  proc.PID,
+				Term: term.Cont,
 			}
 		case step.FwdSpec:
-			d, ok := val.D.(chnl.ID)
+			d, ok := val.Y.(chnl.ID)
 			if !ok {
-				err = chnl.ErrNotAnID(val.D)
+				err = chnl.ErrNotAnID(val.Y)
 				s.log.Error("transition taking failed",
 					slog.Any("reason", err),
 				)
 				return err
 			}
-			err := s.chnls.Transfer(msg.PID, proc.ProcID, []chnl.ID{d})
+			err := s.chnls.Transfer(msg.PID, proc.PID, []chnl.ID{d})
 			if err != nil {
 				s.log.Error("channel transfer failed",
 					slog.Any("reason", err),
 					slog.Any("from", msg.PID),
-					slog.Any("to", proc.ProcID),
+					slog.Any("to", proc.PID),
 					slog.Any("id", d),
 				)
 				return err
 			}
 			newProc = step.ProcRoot{
-				ID:     id.New(),
-				ProcID: proc.ProcID,
-				Term:   step.Subst(term, val.C, d),
+				ID:   id.New(),
+				PID:  proc.PID,
+				Term: step.Subst(term, val.X, d),
 			}
 		default:
 			panic(step.ErrValTypeUnexpected(msg.Val))
@@ -598,7 +598,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newMsg := step.MsgRoot{
 				ID:  id.New(),
-				PID: proc.ProcID,
+				PID: proc.PID,
 				VID: curVia.ID,
 				Val: term,
 			}
@@ -670,11 +670,11 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
-		err = s.chnls.Transfer(proc.ProcID, srv.PID, []chnl.ID{b.ID})
+		err = s.chnls.Transfer(proc.PID, srv.PID, []chnl.ID{b.ID})
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
-				slog.Any("from", proc.ProcID),
+				slog.Any("from", proc.PID),
 				slog.Any("to", srv.PID),
 				slog.Any("id", b.ID),
 			)
@@ -684,9 +684,9 @@ func (s *service) takeProcWith(
 		recv.Cont = step.Subst(recv.Cont, recv.X, newVia.ID)
 		recv.Cont = step.Subst(recv.Cont, recv.Y, b.ID)
 		newProc := step.ProcRoot{
-			ID:     id.New(),
-			ProcID: chnl.Subst(srv.PID, curVia.ID, newVia.ID),
-			Term:   recv.Cont,
+			ID:   id.New(),
+			PID:  chnl.Subst(srv.PID, curVia.ID, newVia.ID),
+			Term: recv.Cont,
 		}
 		return s.takeProc(newProc)
 	case step.RecvSpec:
@@ -717,7 +717,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newSrv := step.SrvRoot{
 				ID:   id.New(),
-				PID:  proc.ProcID,
+				PID:  proc.PID,
 				VID:  curVia.ID,
 				Cont: term,
 			}
@@ -789,12 +789,12 @@ func (s *service) takeProcWith(
 			)
 			return err
 		}
-		err = s.chnls.Transfer(msg.PID, proc.ProcID, []chnl.ID{b.ID})
+		err = s.chnls.Transfer(msg.PID, proc.PID, []chnl.ID{b.ID})
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
 				slog.Any("from", msg.PID),
-				slog.Any("to", proc.ProcID),
+				slog.Any("to", proc.PID),
 				slog.Any("id", b.ID),
 			)
 			return err
@@ -803,9 +803,9 @@ func (s *service) takeProcWith(
 		term.Cont = step.Subst(term.Cont, term.X, newVia.ID)
 		term.Cont = step.Subst(term.Cont, term.Y, b.ID)
 		newProc := step.ProcRoot{
-			ID:     id.New(),
-			ProcID: chnl.Subst(proc.ProcID, curVia.ID, newVia.ID),
-			Term:   term.Cont,
+			ID:   id.New(),
+			PID:  chnl.Subst(proc.PID, curVia.ID, newVia.ID),
+			Term: term.Cont,
 		}
 		return s.takeProc(newProc)
 	case step.LabSpec:
@@ -836,7 +836,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newMsg := step.MsgRoot{
 				ID:  id.New(),
-				PID: proc.ProcID,
+				PID: proc.PID,
 				VID: curVia.ID,
 				Val: term,
 			}
@@ -894,9 +894,9 @@ func (s *service) takeProcWith(
 		}
 		s.log.Debug("transition taking succeeded")
 		newProc := step.ProcRoot{
-			ID:     id.New(),
-			ProcID: chnl.Subst(srv.PID, curVia.ID, newVia.ID),
-			Term:   step.Subst(cont.Conts[term.L], cont.X, newVia.ID),
+			ID:   id.New(),
+			PID:  chnl.Subst(srv.PID, curVia.ID, newVia.ID),
+			Term: step.Subst(cont.Conts[term.L], cont.X, newVia.ID),
 		}
 		return s.takeProc(newProc)
 	case step.CaseSpec:
@@ -927,7 +927,7 @@ func (s *service) takeProcWith(
 		if curSem == nil {
 			newSrv := step.SrvRoot{
 				ID:   id.New(),
-				PID:  proc.ProcID,
+				PID:  proc.PID,
 				VID:  curVia.ID,
 				Cont: term,
 			}
@@ -985,40 +985,40 @@ func (s *service) takeProcWith(
 		}
 		s.log.Debug("transition taking succeeded")
 		newProc := step.ProcRoot{
-			ID:     id.New(),
-			ProcID: chnl.Subst(proc.ProcID, curVia.ID, newVia.ID),
-			Term:   step.Subst(term.Conts[lab.L], term.X, newVia.ID),
+			ID:   id.New(),
+			PID:  chnl.Subst(proc.PID, curVia.ID, newVia.ID),
+			Term: step.Subst(term.Conts[lab.L], term.X, newVia.ID),
 		}
 		return s.takeProc(newProc)
 	case step.SpawnSpec:
 		newPE, err := s.Involve(PartSpec{
-			Steward:   proc.ProcID,
-			Servant:   term.Pool,
-			Service:   term.Sig,
-			Resources: term.CEs,
+			Steward:   proc.PID,
+			Servant:   term.PoolQN,
+			Service:   term.SigID,
+			Resources: term.Ys2,
 		})
 		if err != nil {
 			return err
 		}
-		err = s.pools.Transfer(id.Empty(), proc.ProcID, []chnl.ID{newPE.ID})
+		err = s.pools.Transfer(id.Empty(), proc.PID, []chnl.ID{newPE.ID})
 		if err != nil {
 			s.log.Error("channel transfer failed",
 				slog.Any("reason", err),
 				slog.Any("from", id.Empty()),
-				slog.Any("to", proc.ProcID),
+				slog.Any("to", proc.PID),
 				slog.Any("pid", newPE.ID),
 			)
 			return err
 		}
 		s.log.Debug("transition taking succeeded")
 		cfg.Add(newPE)
-		cfg.Remove(term.CEs...)
-		proc.Term = step.Subst(term.Cont, term.PE, newPE.ID)
+		cfg.Remove(term.Ys2...)
+		proc.Term = step.Subst(term.Cont, term.X, newPE.ID)
 		return s.takeProcWith(proc, cfg)
 	case step.FwdSpec:
-		viaID, ok := term.C.(chnl.ID)
+		viaID, ok := term.X.(chnl.ID)
 		if !ok {
-			err := chnl.ErrNotAnID(term.C)
+			err := chnl.ErrNotAnID(term.X)
 			s.log.Error("transition taking failed",
 				slog.Any("reason", err),
 			)
@@ -1052,69 +1052,69 @@ func (s *service) takeProcWith(
 		case pol.Pos:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
-				cID, ok := term.C.(chnl.ID)
+				xID, ok := term.X.(chnl.ID)
 				if !ok {
-					err := chnl.ErrNotAnID(term.C)
+					err := chnl.ErrNotAnID(term.X)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				c, ok := cfg.LookupCh(cID)
+				x, ok := cfg.LookupCh(xID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(cID)
+					err = chnl.ErrMissingInCfg(xID)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				err := s.chnls.Transfer(proc.ProcID, sem.PID, []chnl.ID{c.ID})
+				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{x.ID})
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
-						slog.Any("from", proc.ProcID),
+						slog.Any("from", proc.PID),
 						slog.Any("to", sem.PID),
-						slog.Any("id", c.ID),
+						slog.Any("id", x.ID),
 					)
 					return err
 				}
 				newProc := step.ProcRoot{
-					ID:     id.New(),
-					ProcID: sem.PID,
-					Term:   step.Subst(sem.Cont, term.D, c.ID),
+					ID:   id.New(),
+					PID:  sem.PID,
+					Term: step.Subst(sem.Cont, term.Y, x.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case step.MsgRoot:
-				dID, ok := term.C.(chnl.ID)
+				yID, ok := term.Y.(chnl.ID)
 				if !ok {
-					err := chnl.ErrNotAnID(term.D)
+					err := chnl.ErrNotAnID(term.Y)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				d, ok := cfg.LookupCh(dID)
+				y, ok := cfg.LookupCh(yID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(dID)
+					err = chnl.ErrMissingInCfg(yID)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				err := s.chnls.Transfer(proc.ProcID, sem.PID, []chnl.ID{d.ID})
+				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{y.ID})
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
-						slog.Any("from", proc.ProcID),
+						slog.Any("from", proc.PID),
 						slog.Any("to", sem.PID),
-						slog.Any("id", d.ID),
+						slog.Any("id", y.ID),
 					)
 					return err
 				}
 				newProc := step.ProcRoot{
-					ID:     id.New(),
-					ProcID: sem.PID,
-					Term:   step.Subst(sem.Val, term.C, d.ID),
+					ID:   id.New(),
+					PID:  sem.PID,
+					Term: step.Subst(sem.Val, term.X, y.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case nil:
 				newMsg := step.MsgRoot{
 					ID:  id.New(),
-					PID: proc.ProcID,
+					PID: proc.PID,
 					VID: curVia.ID,
 					Val: term,
 				}
@@ -1134,69 +1134,69 @@ func (s *service) takeProcWith(
 		case pol.Neg:
 			switch sem := curSem.(type) {
 			case step.SrvRoot:
-				dID, ok := term.C.(chnl.ID)
+				yID, ok := term.Y.(chnl.ID)
 				if !ok {
-					err := chnl.ErrNotAnID(term.D)
+					err := chnl.ErrNotAnID(term.Y)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				d, ok := cfg.LookupCh(dID)
+				y, ok := cfg.LookupCh(yID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(dID)
+					err = chnl.ErrMissingInCfg(yID)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				err := s.chnls.Transfer(proc.ProcID, sem.PID, []chnl.ID{d.ID})
+				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{y.ID})
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
-						slog.Any("from", proc.ProcID),
+						slog.Any("from", proc.PID),
 						slog.Any("to", sem.PID),
-						slog.Any("id", d.ID),
+						slog.Any("id", y.ID),
 					)
 					return err
 				}
 				newProc := step.ProcRoot{
-					ID:     id.New(),
-					ProcID: sem.PID,
-					Term:   step.Subst(sem.Cont, term.C, d.ID),
+					ID:   id.New(),
+					PID:  sem.PID,
+					Term: step.Subst(sem.Cont, term.X, y.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case step.MsgRoot:
-				cID, ok := term.C.(chnl.ID)
+				xID, ok := term.X.(chnl.ID)
 				if !ok {
-					err := chnl.ErrNotAnID(term.C)
+					err := chnl.ErrNotAnID(term.X)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				c, ok := cfg.LookupCh(cID)
+				x, ok := cfg.LookupCh(xID)
 				if !ok {
-					err = chnl.ErrMissingInCfg(cID)
+					err = chnl.ErrMissingInCfg(xID)
 					s.log.Error("transition taking failed", slog.Any("reason", err))
 					return err
 				}
-				err := s.chnls.Transfer(proc.ProcID, sem.PID, []chnl.ID{c.ID})
+				err := s.chnls.Transfer(proc.PID, sem.PID, []chnl.ID{x.ID})
 				if err != nil {
 					s.log.Error("channel transfer failed",
 						slog.Any("reason", err),
-						slog.Any("from", proc.ProcID),
+						slog.Any("from", proc.PID),
 						slog.Any("to", sem.PID),
-						slog.Any("id", c.ID),
+						slog.Any("id", x.ID),
 					)
 					return err
 				}
 				newProc := step.ProcRoot{
-					ID:     id.New(),
-					ProcID: sem.PID,
-					Term:   step.Subst(sem.Val, term.D, c.ID),
+					ID:   id.New(),
+					PID:  sem.PID,
+					Term: step.Subst(sem.Val, term.Y, x.ID),
 				}
 				s.log.Debug("transition taking succeeded")
 				return s.takeProc(newProc)
 			case nil:
 				newSrv := step.SrvRoot{
 					ID:   id.New(),
-					PID:  proc.ProcID,
+					PID:  proc.PID,
 					VID:  curVia.ID,
 					Cont: term,
 				}
@@ -1381,9 +1381,9 @@ func (s *service) checkProvider(
 			s.log.Error("type checking failed", viaAttr)
 			return err
 		}
-		gotD, ok := ctx.Linear[term.D]
+		gotD, ok := ctx.Linear[term.Y]
 		if !ok {
-			err := chnl.ErrMissingInCtx(term.D)
+			err := chnl.ErrMissingInCtx(term.Y)
 			s.log.Error("type checking failed", viaAttr)
 			return err
 		}
@@ -1546,21 +1546,21 @@ func (s *service) checkClient(
 		}
 		return nil
 	case step.SpawnSpec:
-		if !env.Contains(got.Sig) {
-			err := sig.ErrRootMissingInEnv(got.Sig)
+		if !env.Contains(got.SigID) {
+			err := sig.ErrRootMissingInEnv(got.SigID)
 			s.log.Error("type checking failed", viaAttr)
 			return err
 		}
-		wantCEs := env.LookupCEs(got.Sig)
-		if len(got.CEs) != len(wantCEs) {
-			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCEs), len(got.CEs))
-			s.log.Error("type checking failed", viaAttr, slog.Any("want", wantCEs), slog.Any("got", got.CEs))
+		wantCEs := env.LookupCEs(got.SigID)
+		if len(got.Ys2) != len(wantCEs) {
+			err := fmt.Errorf("context mismatch: want %v items, got %v items", len(wantCEs), len(got.Ys2))
+			s.log.Error("type checking failed", viaAttr, slog.Any("want", wantCEs), slog.Any("got", got.Ys2))
 			return err
 		}
-		if len(got.CEs) == 0 {
+		if len(got.Ys2) == 0 {
 			return nil
 		}
-		for i, gotCE := range got.CEs {
+		for i, gotCE := range got.Ys2 {
 			gotSt := ctx.Linear[gotCE]
 			err := state.CheckRoot(gotSt, wantCEs[i].C)
 			if err != nil {
@@ -1569,7 +1569,7 @@ func (s *service) checkClient(
 			}
 			delete(ctx.Linear, gotCE)
 		}
-		ctx.Linear[got.PE] = env.LookupPE(got.Sig).C
+		ctx.Linear[got.X] = env.LookupPE(got.SigID).C
 		return s.checkState(env, ctx, pe, got.Cont)
 	default:
 		panic(step.ErrTermTypeUnexpected(t))

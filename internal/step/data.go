@@ -120,7 +120,7 @@ func dataFromRoot(r Root) (*RootData, error) {
 	}
 	switch root := r.(type) {
 	case ProcRoot:
-		pid := id.ConvertToNullString(root.ProcID)
+		pid := id.ConvertToNullString(root.PID)
 		spec, err := dataFromTerm(root.Term)
 		if err != nil {
 			return nil, err
@@ -182,7 +182,7 @@ func dataToRoot(dto *RootData) (Root, error) {
 		if err != nil {
 			return nil, err
 		}
-		return ProcRoot{ID: ident, ProcID: pid, Term: term}, nil
+		return ProcRoot{ID: ident, PID: pid, Term: term}, nil
 	case msg:
 		val, err := dataToValue(dto.Spec)
 		if err != nil {
@@ -281,8 +281,8 @@ func dataFromValue(v Value) specData {
 		return specData{
 			K: fwd,
 			Fwd: &fwdData{
-				C: ph.DataFromPH(val.C),
-				D: ph.DataFromPH(val.D),
+				C: ph.DataFromPH(val.X),
+				D: ph.DataFromPH(val.Y),
 			},
 		}
 	default:
@@ -323,7 +323,7 @@ func dataToValue(dto specData) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		return FwdSpec{C: c, D: d}, nil
+		return FwdSpec{X: c, Y: d}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}
@@ -376,8 +376,8 @@ func dataFromCont(c Continuation) (specData, error) {
 		return specData{
 			K: fwd,
 			Fwd: &fwdData{
-				C: ph.DataFromPH(cont.C),
-				D: ph.DataFromPH(cont.D),
+				C: ph.DataFromPH(cont.X),
+				D: ph.DataFromPH(cont.Y),
 			},
 		}, nil
 	default:
@@ -434,7 +434,7 @@ func dataToCont(dto specData) (Continuation, error) {
 		if err != nil {
 			return nil, err
 		}
-		return FwdSpec{C: c, D: d}, nil
+		return FwdSpec{X: c, Y: d}, nil
 	default:
 		panic(errUnexpectedTermKind(dto.K))
 	}

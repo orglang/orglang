@@ -294,18 +294,18 @@ func MsgFromTerm(t Term) TermMsg {
 		return TermMsg{
 			K: Spawn,
 			Spawn: &SpawnMsg{
-				PE:   ph.MsgFromPH(term.PE),
-				CEs:  id.ConvertToStrings(term.CEs),
+				PE:   ph.MsgFromPH(term.X),
+				CEs:  id.ConvertToStrings(term.Ys2),
 				Cont: MsgFromTerm(term.Cont),
-				Sig:  term.Sig.String(),
+				Sig:  term.SigID.String(),
 			},
 		}
 	case FwdSpec:
 		return TermMsg{
 			K: Fwd,
 			Fwd: &FwdMsg{
-				C: ph.MsgFromPH(term.C),
-				D: ph.MsgFromPH(term.D),
+				C: ph.MsgFromPH(term.X),
+				D: ph.MsgFromPH(term.Y),
 			},
 		}
 	case CTASpec:
@@ -407,7 +407,7 @@ func MsgToTerm(dto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return SpawnSpec{PE: pe, CEs: ces, Cont: cont, Sig: sigID}, nil
+		return SpawnSpec{X: pe, Ys2: ces, Cont: cont, SigID: sigID}, nil
 	case Fwd:
 		c, err := ph.MsgToPH(dto.Fwd.C)
 		if err != nil {
@@ -417,7 +417,7 @@ func MsgToTerm(dto TermMsg) (Term, error) {
 		if err != nil {
 			return nil, err
 		}
-		return FwdSpec{C: c, D: d}, nil
+		return FwdSpec{X: c, Y: d}, nil
 	case CTA:
 		key, err := ak.ConvertFromString(dto.CTA.AK)
 		if err != nil {
