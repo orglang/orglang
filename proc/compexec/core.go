@@ -331,10 +331,12 @@ func (s *service) takeWith(
 				ChnlBS:  commChnl.ChnlBS,
 				ExpVK:   nextExpVK,
 			})
-			execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-				CompRef: execSnap.CompRef,
-				ProcExp: termExp.ContExp,
-			})
+			if termExp.ContExp != nil {
+				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+					CompRef: execSnap.CompRef,
+					ProcExp: termExp.ContExp,
+				})
+			}
 			s.log.Debug("step taking succeed", compAttr)
 			return execMod, execEff, exchMod, nil
 		case termexp.FwdRec:
@@ -446,10 +448,12 @@ func (s *service) takeWith(
 				ChnlBS:  valChnl.ChnlBS,
 				ExpVK:   valChnl.ExpVK,
 			})
-			execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-				CompRef: receival.CompRef,
-				ProcExp: expRec.ContExp,
-			})
+			if expRec.ContExp != nil {
+				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+					CompRef: receival.CompRef,
+					ProcExp: expRec.ContExp,
+				})
+			}
 			s.log.Debug("step taking succeed", compAttr)
 			return execMod, execEff, exchMod, nil
 		default:
@@ -531,10 +535,12 @@ func (s *service) takeWith(
 				ChnlBS:  compvar.AssetSide,
 				ExpVK:   valExp.ValExpVK,
 			})
-			execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-				CompRef: execSnap.CompRef,
-				ProcExp: termExp.ContExp,
-			})
+			if termExp.ContExp != nil {
+				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+					CompRef: execSnap.CompRef,
+					ProcExp: termExp.ContExp,
+				})
+			}
 			s.log.Debug("step taking succeed", compAttr)
 			return execMod, execEff, exchMod, nil
 		default:
@@ -616,10 +622,12 @@ func (s *service) takeWith(
 				// TODO значение ChnlBS
 				ExpVK: nextExpVK,
 			})
-			execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-				CompRef: folowing.CompRef,
-				ProcExp: contExp.ContExps[termExp.ValLabQN],
-			})
+			if contExp.ContExps[termExp.ValLabQN] != nil {
+				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+					CompRef: folowing.CompRef,
+					ProcExp: contExp.ContExps[termExp.ValLabQN],
+				})
+			}
 			s.log.Debug("step taking succeed", compAttr)
 			return execMod, execEff, exchMod, nil
 		default:
@@ -677,10 +685,12 @@ func (s *service) takeWith(
 				// TODO значение ChnlBS
 				ExpVK: valExp.ValExpVK,
 			})
-			execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-				CompRef: execSnap.CompRef,
-				ProcExp: termExp.ContExps[valExp.ValLabQN],
-			})
+			if termExp.ContExps[valExp.ValLabQN] != nil {
+				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+					CompRef: execSnap.CompRef,
+					ProcExp: termExp.ContExps[valExp.ValLabQN],
+				})
+			}
 			s.log.Debug("step taking succeed", compAttr)
 			return execMod, execEff, exchMod, nil
 		default:
@@ -729,10 +739,12 @@ func (s *service) takeWith(
 					// TODO значение ChnlBS
 					ExpVK: commChnl.ExpVK,
 				})
-				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-					CompRef: forwardable.CompRef,
-					ProcExp: forwardable.ContExp,
-				})
+				if forwardable.ContExp != nil {
+					execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+						CompRef: forwardable.CompRef,
+						ProcExp: forwardable.ContExp,
+					})
+				}
 				s.log.Debug("step taking succeed", compAttr)
 				return execMod, execEff, exchMod, nil
 			case commturn.PubRec:
@@ -795,10 +807,12 @@ func (s *service) takeWith(
 					// TODO значение ChnlBS
 					ExpVK: contChnl.ExpVK,
 				})
-				execEff.Steps = append(execEff.Steps, compstep.StepSpec{
-					CompRef: forwardable.CompRef,
-					ProcExp: forwardable.ContExp,
-				})
+				if forwardable.ContExp != nil {
+					execEff.Steps = append(execEff.Steps, compstep.StepSpec{
+						CompRef: forwardable.CompRef,
+						ProcExp: forwardable.ContExp,
+					})
+				}
 				s.log.Debug("step taking succeed", compAttr)
 				return execMod, execEff, exchMod, nil
 			case commturn.PubRec:
