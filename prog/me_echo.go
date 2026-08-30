@@ -22,7 +22,7 @@ func newControllerEcho(a API, l *slog.Logger) *controllerEcho {
 	return &controllerEcho{a, l.With(name)}
 }
 
-func cfgEchoController(e *echo.Echo, c *controllerEcho) error {
+func cfgControllerEcho(e *echo.Echo, c *controllerEcho) error {
 	e.POST("/api/v1/progs", c.PostSpec)
 	return nil
 }

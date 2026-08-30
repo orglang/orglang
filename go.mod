@@ -16,6 +16,7 @@ require (
 	codeberg.org/chavacava/garif v0.2.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
+	github.com/alecthomas/participle/v2 v2.1.4 // indirect
 	github.com/alitto/pond/v2 v2.7.0 // indirect
 	github.com/cristalhq/acmd v0.12.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect

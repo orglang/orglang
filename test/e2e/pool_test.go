@@ -23,7 +23,7 @@ import (
 	pooltypedef "github.com/orglang/go-sdk/pool/typedef"
 	pooltypeexp "github.com/orglang/go-sdk/pool/typeexp"
 	proccompstep "github.com/orglang/go-sdk/proc/compstep"
-	"github.com/orglang/go-sdk/proc/termdec"
+	proctermdec "github.com/orglang/go-sdk/proc/termdec"
 	proctermexp "github.com/orglang/go-sdk/proc/termexp"
 	"github.com/orglang/go-sdk/proc/typedef"
 	"github.com/orglang/go-sdk/proc/typeexp"
@@ -218,7 +218,7 @@ func (s *suite) waitClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	closerProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	closerProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: closerProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "closer-provider-ph",
@@ -294,7 +294,7 @@ func (s *suite) waitClose(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	waiterProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	waiterProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN:  waiterProcQN,
 		LiabVar: termvar.VarSpec{ChnlPH: "waiter-provider-ph", TypeQN: oneTypeQN},
 		AssetVars: []termvar.VarSpec{
@@ -438,7 +438,7 @@ func (s *suite) recvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	receiverProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	receiverProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: receiverProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "receiver-provider-ph",
@@ -449,7 +449,7 @@ func (s *suite) recvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	messageProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	messageProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: messageProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "message-provider-ph",
@@ -460,7 +460,7 @@ func (s *suite) recvSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	// and
-	senderProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	senderProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: senderProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "sender-provider-ph",
@@ -621,7 +621,7 @@ func (s *suite) caseLab(t *testing.T) {
 	}
 	// and
 	followerProcQN := "follower-proc-qn"
-	followerProcDec := termdec.DecSpec{
+	followerProcDec := proctermdec.DecSpec{
 		TermQN: followerProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "follower-provider-ph",
@@ -634,7 +634,7 @@ func (s *suite) caseLab(t *testing.T) {
 	}
 	// and
 	deciderProcQN := "decider-proc-qn"
-	deciderProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	deciderProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN:    deciderProcQN,
 		AssetVars: []termvar.VarSpec{followerProcDec.LiabVar},
 		LiabVar: termvar.VarSpec{
@@ -759,7 +759,7 @@ func (s *suite) call(t *testing.T) {
 	}
 	// and
 	injecteeProcQN := "injectee-proc-qn"
-	injecteeProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	injecteeProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: injecteeProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "injectee-provider-ph",
@@ -797,7 +797,7 @@ func (s *suite) call(t *testing.T) {
 	}
 	// and
 	callerProcQN := "caller-proc-qn"
-	callerProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	callerProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: callerProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "caller-provider-ph",
@@ -839,7 +839,7 @@ func (s *suite) call(t *testing.T) {
 	}
 	// and
 	calleeProcQN := "callee-proc-qn"
-	_, err = s.ProcDecAPI.Create(termdec.DecSpec{
+	_, err = s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: calleeProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "callee-provider-ph",
@@ -905,7 +905,7 @@ func (s *suite) fwd(t *testing.T) {
 	}
 	// and
 	closerProcQN := "closer-proc-qn"
-	closerProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	closerProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: closerProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "closer-provider-ph",
@@ -917,7 +917,7 @@ func (s *suite) fwd(t *testing.T) {
 	}
 	// and
 	forwarderProcQN := "forwarder-proc-qn"
-	forwarderProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	forwarderProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: forwarderProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "forwarder-provider-ph",
@@ -932,7 +932,7 @@ func (s *suite) fwd(t *testing.T) {
 	}
 	// and
 	waiterProcQN := "waiter-proc-qn"
-	waiterProcDec, err := s.ProcDecAPI.Create(termdec.DecSpec{
+	waiterProcDec, err := s.ProcDecAPI.Create(proctermdec.DecSpec{
 		TermQN: waiterProcQN,
 		LiabVar: termvar.VarSpec{
 			ChnlPH: "waiter-provider-ph",
