@@ -9,29 +9,28 @@ import (
 	"orglang/go-engine/lib/lf"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func NewPgxDAO(table string) func(log *slog.Logger) *pgxDAO {
-	return func(log *slog.Logger) *pgxDAO {
-		name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-		return &pgxDAO{newSQLBuilder(table), log.With(name)}
+func NewDaoPgx(table string) func(log *slog.Logger) *daoPgx {
+	return func(log *slog.Logger) *daoPgx {
+		name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+		return &daoPgx{newSQLBuilder(table), log.With(name)}
 	}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) TouchRef(source db.Source, ref SemRef) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) TouchRef(uow db.UoW, ref SemRef) error {
 	dto := DataFromRef(ref)
 	refAttr := slog.Any("ref", ref)
 	sql, args := dao.qb.updateRef(dto)
-	ct, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	ct, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
@@ -40,7 +39,7 @@ func (dao *pgxDAO) TouchRef(source db.Source, ref SemRef) error {
 		dao.log.Error("touching failed", refAttr)
 		return errConcurrentModification(ref)
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "touching succeed", refAttr)
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "touching succeed", refAttr)
 	return nil
 }
 

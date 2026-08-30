@@ -47,12 +47,12 @@ type SubRec struct {
 func (r SubRec) turn() {}
 
 type service struct {
-	poolSteps Repo
-	procExecs compexec.Repo
-	poolVars  compvar.Repo
-	procDecs  termdec.Repo
-	operator  db.Operator
-	log       *slog.Logger
+	poolSteps  Repo
+	procExecs  compexec.Repo
+	poolVars   compvar.Repo
+	procDecs   termdec.Repo
+	transactor db.Transactor
+	log        *slog.Logger
 }
 
 // for compilation purposes
@@ -65,11 +65,11 @@ func newService(
 	procExecs compexec.Repo,
 	poolVars compvar.Repo,
 	procDecs termdec.Repo,
-	operator db.Operator,
+	transactor db.Transactor,
 	log *slog.Logger,
 ) *service {
 	name := slog.String("name", reflect.TypeFor[service]().Name())
-	return &service{poolSteps, procExecs, poolVars, procDecs, operator, log.With(name)}
+	return &service{poolSteps, procExecs, poolVars, procDecs, transactor, log.With(name)}
 }
 
 func ErrRecTypeUnexpected(got TurnRec) error {

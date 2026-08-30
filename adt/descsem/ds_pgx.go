@@ -7,25 +7,24 @@ import (
 	"orglang/go-engine/lib/db"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func NewPgxDAO(table string) func(log *slog.Logger) *pgxDAO {
-	return func(log *slog.Logger) *pgxDAO {
-		name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-		return &pgxDAO{newSQLBuilder(table), log.With(name)}
+func NewDaoPgx(table string) func(log *slog.Logger) *daoPgx {
+	return func(log *slog.Logger) *daoPgx {
+		name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+		return &daoPgx{newSQLBuilder(table), log.With(name)}
 	}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec SemRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(uow db.UoW, rec SemRec) error {
 	recAttr := slog.Any("rec", rec)
 	dto, convErr := DataFromRec(rec)
 	if convErr != nil {
@@ -33,7 +32,7 @@ func (dao *pgxDAO) AddRec(source db.Source, rec SemRec) error {
 		return convErr
 	}
 	sql, args := dao.qb.insertRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", recAttr, slog.String("sql", sql))
 		return execErr

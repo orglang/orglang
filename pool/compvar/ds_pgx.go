@@ -13,30 +13,29 @@ import (
 	"orglang/go-engine/adt/compvar"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRecs(source db.Source, recs []compvar.VarRec) (err error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRecs(uow db.UoW, recs []compvar.VarRec) (err error) {
 	batch := pgx.Batch{}
 	for _, rec := range recs {
 		dto := compvar.DataFromVarRec(rec)
 		sql, args := dao.qb.insertRec(getTableName(rec), dto)
 		batch.Queue(sql, args...)
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -47,7 +46,7 @@ func (dao *pgxDAO) AddRecs(source db.Source, recs []compvar.VarRec) (err error) 
 			return readErr
 		}
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "insertion succeed")
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "insertion succeed")
 	return nil
 }
 

@@ -4,29 +4,29 @@ import (
 	"log/slog"
 	"reflect"
 
-	"orglang/go-engine/adt/uniqsym"
+	"github.com/jackc/pgx/v5"
+
 	"orglang/go-engine/lib/db"
 
-	"github.com/jackc/pgx/v5"
+	"orglang/go-engine/adt/uniqsym"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec DefRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(uow db.UoW, rec DefRec) error {
 	refAttr := slog.Any("ref", rec.TermRef)
 	dto, convErr := DataFromDecRec(rec)
 	if convErr != nil {
@@ -34,7 +34,7 @@ func (dao *pgxDAO) AddRec(source db.Source, rec DefRec) error {
 		return convErr
 	}
 	sql, args := dao.qb.insertRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr)
 		return execErr
@@ -42,11 +42,10 @@ func (dao *pgxDAO) AddRec(source db.Source, rec DefRec) error {
 	return nil
 }
 
-func (dao *pgxDAO) GetRecByQN(source db.Source, qn uniqsym.ADT) (DefRec, error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) GetRecByQN(uow db.UoW, qn uniqsym.ADT) (DefRec, error) {
 	qnAttr := slog.Any("qn", qn)
 	sql, args := dao.qb.selectRecByQN(uniqsym.ConvertToString(qn))
-	rows, execErr := ds.Conn.Query(ds.Ctx, sql, args...)
+	rows, execErr := uow.Pgx.Query(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", qnAttr)
 		return DefRec{}, execErr

@@ -9,10 +9,10 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, ExecRec) error
-	ModifyRec(db.Source, ExecMod) error
-	GetSnapByRef(db.Source, compsem.SemRef) (ExecSnap2, error)
-	GetSnapMapByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]ExecSnap1, error)
+	AddRec(db.UoW, ExecRec) error
+	ModifyRec(db.UoW, ExecMod) error
+	GetSnapByRef(db.UoW, compsem.SemRef) (ExecSnap2, error)
+	GetSnapMapByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]ExecSnap1, error)
 }
 
 type execRec struct {

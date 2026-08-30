@@ -5,7 +5,7 @@ import (
 )
 
 type Repo interface {
-	Insert(db.Source, ExpRec) error
+	Insert(db.UoW, ExpRec) error
 }
 
 type ExpSpecDS struct {

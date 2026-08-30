@@ -14,23 +14,22 @@ import (
 )
 
 // Adapter
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec ExpRec) (err error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(uow db.UoW, rec ExpRec) (err error) {
 	vkAttr := slog.Any("expVK", rec.Key())
 	dto := dataFromExpRec(rec)
 	batch := pgx.Batch{}
@@ -38,7 +37,7 @@ func (dao *pgxDAO) AddRec(source db.Source, rec ExpRec) (err error) {
 		sql, args := dao.qb.insertRec(st)
 		batch.Queue(sql, args...)
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -52,10 +51,9 @@ func (dao *pgxDAO) AddRec(source db.Source, rec ExpRec) (err error) {
 	return nil
 }
 
-func (dao *pgxDAO) SelectRecByVK(source db.Source, expVK valkey.ADT) (ExpRec, error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) SelectRecByVK(uow db.UoW, expVK valkey.ADT) (ExpRec, error) {
 	vkAttr := slog.Any("expVK", expVK)
-	rows, queryErr := ds.Conn.Query(ds.Ctx, selectByID, valkey.ConvertToInt(expVK))
+	rows, queryErr := uow.Pgx.Query(uow.Ctx, selectByID, valkey.ConvertToInt(expVK))
 	if queryErr != nil {
 		dao.log.Error("query execution failed", vkAttr)
 		return nil, queryErr
@@ -70,7 +68,7 @@ func (dao *pgxDAO) SelectRecByVK(source db.Source, expVK valkey.ADT) (ExpRec, er
 		dao.log.Error("entity selection failed", vkAttr)
 		return nil, errors.New("no rows selected")
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "entity selection succeed", slog.Any("dtos", dtos))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "entity selection succeed", slog.Any("dtos", dtos))
 	states := make(map[int64]stateDS, len(dtos))
 	for _, dto := range dtos {
 		states[dto.ExpVK] = dto
@@ -78,8 +76,8 @@ func (dao *pgxDAO) SelectRecByVK(source db.Source, expVK valkey.ADT) (ExpRec, er
 	return statesToExpRec(states, states[valkey.ConvertToInt(expVK)])
 }
 
-func (dao *pgxDAO) SelectEnv(source db.Source, expVKs []valkey.ADT) (map[valkey.ADT]ExpRec, error) {
-	recs, err := dao.SelectRecsByVKs(source, expVKs)
+func (dao *daoPgx) SelectEnv(uow db.UoW, expVKs []valkey.ADT) (map[valkey.ADT]ExpRec, error) {
+	recs, err := dao.SelectRecsByVKs(uow, expVKs)
 	if err != nil {
 		return nil, err
 	}
@@ -90,13 +88,12 @@ func (dao *pgxDAO) SelectEnv(source db.Source, expVKs []valkey.ADT) (map[valkey.
 	return env, nil
 }
 
-func (dao *pgxDAO) SelectRecsByVKs(source db.Source, expVKs []valkey.ADT) (_ []ExpRec, err error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) SelectRecsByVKs(uow db.UoW, expVKs []valkey.ADT) (_ []ExpRec, err error) {
 	batch := pgx.Batch{}
 	for _, expVK := range expVKs {
 		batch.Queue(selectByID, valkey.ConvertToInt(expVK))
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -122,7 +119,7 @@ func (dao *pgxDAO) SelectRecsByVKs(source db.Source, expVKs []valkey.ADT) (_ []E
 		}
 		recs = append(recs, rec)
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "entities selection succeed", slog.Any("recs", recs))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "entities selection succeed", slog.Any("recs", recs))
 	return recs, err
 }
 

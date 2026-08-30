@@ -9,13 +9,13 @@ import (
 var Module = fx.Module("pool/termdef",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newEchoController,
+		newControllerEcho,
 		fx.Annotate(newSQLBuilder, fx.As(new(queryBuilder))),
-		fx.Annotate(descsem.NewPgxDAO(descBinds), fx.As(new(descsem.Repo))),
+		fx.Annotate(descsem.NewDaoPgx(descBinds), fx.As(new(descsem.Repo))),
 	),
 	fx.Invoke(
 		cfgEchoController,

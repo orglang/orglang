@@ -17,22 +17,22 @@ import (
 )
 
 // Server-side primary adapter
-type echoController struct {
+type controllerEcho struct {
 	api API
 	log *slog.Logger
 }
 
-func newEchoController(a API, l *slog.Logger) *echoController {
-	return &echoController{a, l}
+func newControllerEcho(a API, l *slog.Logger) *controllerEcho {
+	return &controllerEcho{a, l}
 }
 
-func cfgEchoController(e *echo.Echo, h *echoController) error {
+func cfgEchoController(e *echo.Echo, h *controllerEcho) error {
 	e.GET("/api/v1/procs/:id", h.GetSnap)
 	e.POST("/api/v1/procs/:id/steps", h.PostStep)
 	return nil
 }
 
-func (h *echoController) GetSnap(c echo.Context) error {
+func (h *controllerEcho) GetSnap(c echo.Context) error {
 	var dto sdk1.SemRef
 	bindErr := c.Bind(&dto)
 	if bindErr != nil {
@@ -51,7 +51,7 @@ func (h *echoController) GetSnap(c echo.Context) error {
 	return c.JSON(http.StatusOK, MsgFromExecSnap(snap))
 }
 
-func (h *echoController) PostStep(c echo.Context) error {
+func (h *controllerEcho) PostStep(c echo.Context) error {
 	var dto sdk2.StepSpec
 	bindErr := c.Bind(&dto)
 	if bindErr != nil {

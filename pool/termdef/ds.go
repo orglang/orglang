@@ -9,8 +9,8 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, DefRec) error
-	GetRecByQN(db.Source, uniqsym.ADT) (DefRec, error)
+	AddRec(db.UoW, DefRec) error
+	GetRecByQN(db.UoW, uniqsym.ADT) (DefRec, error)
 }
 
 type defRecDS struct {

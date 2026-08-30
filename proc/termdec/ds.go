@@ -9,11 +9,11 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, DecRec) error
-	GetRefs(db.Source) ([]termsem.SemRef, error)
-	GetSnap(db.Source, termsem.SemRef) (DecSnap, error)
-	GetRecs(db.Source, []identity.ADT) ([]DecRec, error)
-	SelectEnv(db.Source, []identity.ADT) (map[identity.ADT]DecRec, error)
+	AddRec(db.UoW, DecRec) error
+	GetRefs(db.UoW) ([]termsem.SemRef, error)
+	GetSnap(db.UoW, termsem.SemRef) (DecSnap, error)
+	GetRecs(db.UoW, []identity.ADT) ([]DecRec, error)
+	SelectEnv(db.UoW, []identity.ADT) (map[identity.ADT]DecRec, error)
 }
 
 type decRecDS struct {

@@ -14,29 +14,28 @@ import (
 	"orglang/go-engine/adt/uniqsym"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func NewPgxDAO(typeTable, descTable string) func(log *slog.Logger) *pgxDAO {
-	return func(log *slog.Logger) *pgxDAO {
-		name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-		return &pgxDAO{newSQLBuilder(typeTable, descTable), log.With(name)}
+func NewDaoPgx(typeTable, descTable string) func(log *slog.Logger) *daoPgx {
+	return func(log *slog.Logger) *daoPgx {
+		name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+		return &daoPgx{newSQLBuilder(typeTable, descTable), log.With(name)}
 	}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) TouchRef(source db.Source, ref SemRef) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) TouchRef(uow db.UoW, ref SemRef) error {
 	dto := DataFromRef(ref)
 	refAttr := slog.Any("ref", ref)
 	sql, args := dao.qb.updateRef(dto)
-	ct, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	ct, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
@@ -45,13 +44,12 @@ func (dao *pgxDAO) TouchRef(source db.Source, ref SemRef) error {
 		dao.log.Error("touching failed", refAttr)
 		return errConcurrentModification(ref)
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "touching succeed", refAttr)
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "touching succeed", refAttr)
 	return nil
 }
 
-func (dao *pgxDAO) GetRefsByQNs(source db.Source, typeQNs []uniqsym.ADT) (_ map[uniqsym.ADT]SemRef, err error) {
-	ds := db.MustConform[db.SourcePgx](source)
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting started", slog.Any("qns", typeQNs))
+func (dao *daoPgx) GetRefsByQNs(uow db.UoW, typeQNs []uniqsym.ADT) (_ map[uniqsym.ADT]SemRef, err error) {
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "getting started", slog.Any("qns", typeQNs))
 	if len(typeQNs) == 0 {
 		return map[uniqsym.ADT]SemRef{}, nil
 	}
@@ -60,7 +58,7 @@ func (dao *pgxDAO) GetRefsByQNs(source db.Source, typeQNs []uniqsym.ADT) (_ map[
 		sql := dao.qb.selectRefByQN()
 		batch.Queue(sql, uniqsym.ConvertToString(typeQN))
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -79,7 +77,7 @@ func (dao *pgxDAO) GetRefsByQNs(source db.Source, typeQNs []uniqsym.ADT) (_ map[
 		}
 		dtos[typeQN] = dto
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dtos", dtos))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dtos", dtos))
 	return DataToRefMap(dtos)
 }
 

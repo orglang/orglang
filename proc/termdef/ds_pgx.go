@@ -7,20 +7,20 @@ import (
 )
 
 // Adapter
-type pgxDAO struct {
+type daoPgx struct {
 	log *slog.Logger
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func newPgxDAO(l *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{l.With(name)}
+func newDaoPgx(l *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{l.With(name)}
 }
 
-func (dao *pgxDAO) InsertProc(db.Source, DefRec) error {
+func (dao *daoPgx) InsertProc(db.UoW, DefRec) error {
 	return nil
 }

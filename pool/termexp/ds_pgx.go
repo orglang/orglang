@@ -6,11 +6,11 @@ import (
 )
 
 // Adapter
-type pgxDAO struct {
+type daoPgx struct {
 	log *slog.Logger
 }
 
-func newPgxDAO(l *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{l.With(name)}
+func newDaoPgx(l *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{l.With(name)}
 }

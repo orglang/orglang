@@ -16,39 +16,37 @@ import (
 )
 
 // Adapter
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec ExecRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(uow db.UoW, rec ExecRec) error {
 	dto := DataFromExecRec(rec)
 	refAttr := slog.Any("ref", rec.CompRef)
 	sql, args := dao.qb.insertRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "insertion succeed", slog.Any("dto", dto))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "insertion succeed", slog.Any("dto", dto))
 	return nil
 }
 
-func (dao *pgxDAO) GetSnapByRef(source db.Source, ref compsem.SemRef) (ExecSnap, error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) GetSnapByRef(uow db.UoW, ref compsem.SemRef) (ExecSnap, error) {
 	refAttr := slog.Any("ref", ref)
-	chnlRows, err := ds.Conn.Query(ds.Ctx, selectChnls, ref.CompID.String())
+	chnlRows, err := uow.Pgx.Query(uow.Ctx, selectChnls, ref.CompID.String())
 	if err != nil {
 		dao.log.Error("query execution failed", refAttr)
 		return ExecSnap{}, err
@@ -70,11 +68,10 @@ func (dao *pgxDAO) GetSnapByRef(source db.Source, ref compsem.SemRef) (ExecSnap,
 	}, nil
 }
 
-func (dao *pgxDAO) ModifyRec(source db.Source, mod ExecMod) (err error) {
+func (dao *daoPgx) ModifyRec(uow db.UoW, mod ExecMod) (err error) {
 	if len(mod.CompRefs) == 0 {
 		panic("empty locks")
 	}
-	ds := db.MustConform[db.SourcePgx](source)
 	dto, err := DataFromMod(mod)
 	if err != nil {
 		dao.log.Error("conversion failed")
@@ -92,7 +89,7 @@ func (dao *pgxDAO) ModifyRec(source db.Source, mod ExecMod) (err error) {
 		bindReq.Queue(insertBind, args)
 	}
 	if bindReq.Len() > 0 {
-		bindRes := ds.Conn.SendBatch(ds.Ctx, &bindReq)
+		bindRes := uow.Pgx.SendBatch(uow.Ctx, &bindReq)
 		defer func() {
 			err = errors.Join(err, bindRes.Close())
 		}()
@@ -115,7 +112,7 @@ func (dao *pgxDAO) ModifyRec(source db.Source, mod ExecMod) (err error) {
 		}
 		execReq.Queue(updateExec, args)
 	}
-	execRes := ds.Conn.SendBatch(ds.Ctx, &execReq)
+	execRes := uow.Pgx.SendBatch(uow.Ctx, &execReq)
 	defer func() {
 		err = errors.Join(err, execRes.Close())
 	}()

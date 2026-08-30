@@ -9,10 +9,10 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, ExpRec, typesem.SemRef) error
-	GetRecByVK(db.Source, valkey.ADT) (ExpRec, error)
-	GetRecsByVKs(db.Source, []valkey.ADT) ([]ExpRec, error)
-	GetRecMap(db.Source, map[symbol.ADT]valkey.ADT) (map[symbol.ADT]ExpRec, error)
+	AddRec(db.UoW, ExpRec, typesem.SemRef) error
+	GetRecByVK(db.UoW, valkey.ADT) (ExpRec, error)
+	GetRecsByVKs(db.UoW, []valkey.ADT) ([]ExpRec, error)
+	GetRecMap(db.UoW, map[symbol.ADT]valkey.ADT) (map[symbol.ADT]ExpRec, error)
 }
 
 type expKind int16

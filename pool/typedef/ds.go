@@ -8,13 +8,13 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, DefRec) error
-	Update(db.Source, DefRec) error
-	SelectRefs(db.Source) ([]typesem.SemRef, error)
-	SelectRecByRef(db.Source, typesem.SemRef) (DefRec, error)
-	SelectRecsByRefs(db.Source, []typesem.SemRef) ([]DefRec, error)
-	SelectRecByQN(db.Source, uniqsym.ADT) (DefRec, error)
-	GetRecsByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]DefRec, error)
+	AddRec(db.UoW, DefRec) error
+	Update(db.UoW, DefRec) error
+	SelectRefs(db.UoW) ([]typesem.SemRef, error)
+	SelectRecByRef(db.UoW, typesem.SemRef) (DefRec, error)
+	SelectRecsByRefs(db.UoW, []typesem.SemRef) ([]DefRec, error)
+	SelectRecByQN(db.UoW, uniqsym.ADT) (DefRec, error)
+	GetRecsByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]DefRec, error)
 }
 
 type defRecDS struct {

@@ -16,24 +16,24 @@ import (
 )
 
 // Server-side primary adapter
-type echoController struct {
+type controllerEcho struct {
 	api API
 	log *slog.Logger
 }
 
-func newEchoController(a API, l *slog.Logger) *echoController {
-	name := slog.String("name", reflect.TypeFor[echoController]().Name())
-	return &echoController{a, l.With(name)}
+func newControllerEcho(a API, l *slog.Logger) *controllerEcho {
+	name := slog.String("name", reflect.TypeFor[controllerEcho]().Name())
+	return &controllerEcho{a, l.With(name)}
 }
 
-func cfgEchoController(e *echo.Echo, h *echoController) error {
+func cfgEchoController(e *echo.Echo, h *controllerEcho) error {
 	e.POST("/api/v1/types", h.PostSpec)
 	e.GET("/api/v1/types/:id", h.GetSnap)
 	e.PATCH("/api/v1/types/:id", h.PatchOne)
 	return nil
 }
 
-func (h *echoController) PostSpec(c echo.Context) error {
+func (h *controllerEcho) PostSpec(c echo.Context) error {
 	var dto typedef.DefSpec
 	bindErr := c.Bind(&dto)
 	if bindErr != nil {
@@ -60,7 +60,7 @@ func (h *echoController) PostSpec(c echo.Context) error {
 	return c.JSON(http.StatusCreated, MsgFromDefSnap(snap))
 }
 
-func (h *echoController) GetSnap(c echo.Context) error {
+func (h *controllerEcho) GetSnap(c echo.Context) error {
 	var dto sdk.SemRef
 	bindErr := c.Bind(&dto)
 	if bindErr != nil {
@@ -84,7 +84,7 @@ func (h *echoController) GetSnap(c echo.Context) error {
 	return c.JSON(http.StatusOK, MsgFromDefSnap(snap))
 }
 
-func (h *echoController) PatchOne(c echo.Context) error {
+func (h *controllerEcho) PatchOne(c echo.Context) error {
 	var dto typedef.DefSnap
 	bindErr := c.Bind(&dto)
 	if bindErr != nil {

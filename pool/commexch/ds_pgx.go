@@ -13,63 +13,60 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec ExchRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(ouw db.UoW, rec ExchRec) error {
 	dto := DataFromRec(rec)
 	refAttr := slog.Any("ref", rec.CommRef)
 	sql, args := dao.qb.insertRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := ouw.Pgx.Exec(ouw.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "addition succeed", slog.Any("dto", dto))
+	dao.log.Log(ouw.Ctx, lf.LevelTrace, "addition succeed", slog.Any("dto", dto))
 	return nil
 }
 
-func (dao *pgxDAO) ModifyRec(source db.Source, mod ExchMod) error {
+func (dao *daoPgx) ModifyRec(uow db.UoW, mod ExchMod) error {
 	if mod.OffsetNr == nil {
 		return nil
 	}
-	ds := db.MustConform[db.SourcePgx](source)
 	dto := DataFromMod(mod)
 	refAttr := slog.Any("ref", mod.CommRef)
 	sql, args := dao.qb.updateRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "modification succeed", slog.Any("dto", dto))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "modification succeed", slog.Any("dto", dto))
 	return nil
 }
 
-func (dao *pgxDAO) GetRefsByQNs(source db.Source, qns []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error) {
+func (dao *daoPgx) GetRefsByQNs(uow db.UoW, qns []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error) {
 	panic("unimplemented")
 }
 
-func (dao *pgxDAO) GetSnapByQry(source db.Source, qry ExchQry) (ExchSnap, error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) GetSnapByQry(ds db.UoW, qry ExchQry) (ExchSnap, error) {
 	refAttr := slog.Any("ref", qry.CommRef)
 	qryDTO := DataFromQry(qry)
 	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting started", slog.Any("qry", qryDTO))
 	sql, args := dao.qb.selectSnap(qryDTO)
-	rows, execErr := ds.Conn.Query(ds.Ctx, sql, args...)
+	rows, execErr := ds.Pgx.Query(ds.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return ExchSnap{}, execErr

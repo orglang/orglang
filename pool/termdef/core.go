@@ -42,17 +42,17 @@ func newService(
 	termDefRepo Repo,
 	typeDefRepo typedef.Repo,
 	descSemRepo descsem.Repo,
-	operator db.Operator,
+	transactor db.Transactor,
 	log *slog.Logger,
 ) *service {
-	return &service{termDefRepo, typeDefRepo, descSemRepo, operator, log}
+	return &service{termDefRepo, typeDefRepo, descSemRepo, transactor, log}
 }
 
 type service struct {
 	termDefRepo Repo
 	typeDefRepo typedef.Repo
 	descSemRepo descsem.Repo
-	operator    db.Operator
+	transactor  db.Transactor
 	log         *slog.Logger
 }
 
@@ -65,8 +65,8 @@ func (s *service) Create(spec DefSpec) (_ termsem.SemRef, err error) {
 		assetQNs = append(assetQNs, varSpec.TypeQN)
 	}
 	var typeDefs map[uniqsym.ADT]typedef.DefRec
-	getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-		typeDefs, err = s.typeDefRepo.GetRecsByQNs(ds, append(assetQNs, spec.LiabVar.TypeQN))
+	getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+		typeDefs, err = s.typeDefRepo.GetRecsByQNs(uow, append(assetQNs, spec.LiabVar.TypeQN))
 		return err
 	})
 	if getErr != nil {
@@ -87,12 +87,12 @@ func (s *service) Create(spec DefSpec) (_ termsem.SemRef, err error) {
 	}
 	newDef := DefRec{TermRef: termsem.New(), LiabVar: newLiabVar, AssetVars: newAssetVars}
 	newBind := descsem.SemRec{DescQN: spec.TermQN, DescID: newDef.TermRef.TermID, Kind: descsem.TermKind}
-	transactErr := s.operator.Explicit(ctx, func(ds db.Source) error {
-		err = s.descSemRepo.AddRec(ds, newBind)
+	transactErr := s.transactor.ExplicitTx(ctx, func(uow db.UoW) error {
+		err = s.descSemRepo.AddRec(uow, newBind)
 		if err != nil {
 			return err
 		}
-		return s.termDefRepo.AddRec(ds, newDef)
+		return s.termDefRepo.AddRec(uow, newDef)
 	})
 	if transactErr != nil {
 		s.log.Error("creation failed", qnAttr)

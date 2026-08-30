@@ -6,8 +6,8 @@ import (
 
 var Module = fx.Module("lib/db",
 	fx.Provide(
-		newPgxDriver,
-		fx.Annotate(newOperator, fx.As(new(Operator))),
+		newPoolPgx,
+		fx.Annotate(newTransactorPgx, fx.As(new(Transactor))),
 	),
 	fx.Provide(
 		fx.Private,

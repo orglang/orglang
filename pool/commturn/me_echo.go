@@ -8,16 +8,16 @@ import (
 )
 
 // Server-side primary adapter
-type echoController struct {
+type controllerEcho struct {
 	api API
 	log *slog.Logger
 }
 
-func newEchoController(api API, log *slog.Logger) *echoController {
-	name := slog.String("name", reflect.TypeFor[echoController]().Name())
-	return &echoController{api, log.With(name)}
+func newControllerEcho(api API, log *slog.Logger) *controllerEcho {
+	name := slog.String("name", reflect.TypeFor[controllerEcho]().Name())
+	return &controllerEcho{api, log.With(name)}
 }
 
-func cfgEchoController(e *echo.Echo, h *echoController) error {
+func cfgEchoController(e *echo.Echo, h *controllerEcho) error {
 	return nil
 }

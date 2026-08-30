@@ -7,8 +7,8 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, TurnRec) error
-	AddRecs(db.Source, []TurnRec) error
+	AddRec(db.UoW, TurnRec) error
+	AddRecs(db.UoW, []TurnRec) error
 }
 
 type TurnRecDS struct {

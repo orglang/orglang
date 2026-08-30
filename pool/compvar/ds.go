@@ -7,5 +7,5 @@ import (
 )
 
 type Repo interface {
-	AddRecs(db.Source, []compvar.VarRec) error
+	AddRecs(db.UoW, []compvar.VarRec) error
 }

@@ -91,7 +91,7 @@ type service struct {
 	termDefRepo    termdef.Repo
 	implSemRepo    implsem.Repo
 	compSemRepo    compsem.Repo
-	operator       db.Operator
+	transactor     db.Transactor
 	log            *slog.Logger
 }
 
@@ -111,7 +111,7 @@ func newService(
 	termDefRepo termdef.Repo,
 	implSemRepo implsem.Repo,
 	compSemRepo compsem.Repo,
-	operator db.Operator,
+	transactor db.Transactor,
 	log *slog.Logger,
 ) *service {
 	name := slog.String("name", reflect.TypeFor[service]().Name())
@@ -119,7 +119,7 @@ func newService(
 		compExecRepo, compExecExch, compVarRepo,
 		commExchRepo, commTurnRepo, typeExpRepo, procExecRepo, termDefRepo,
 		implSemRepo, compSemRepo,
-		operator, log.With(name),
+		transactor, log.With(name),
 	}
 }
 
@@ -128,8 +128,8 @@ func (s *service) Run(spec ExecSpec) (_ compsem.SemRef, err error) {
 	specAttr := slog.Any("spec", spec)
 	s.log.Debug("creation started", specAttr)
 	var termDec termdef.DefRec
-	getErr1 := s.operator.Implicit(ctx, func(ds db.Source) error {
-		termDec, err = s.termDefRepo.GetRecByQN(ds, spec.TermQN)
+	getErr1 := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+		termDec, err = s.termDefRepo.GetRecByQN(uow, spec.TermQN)
 		return err
 	})
 	if getErr1 != nil {
@@ -144,8 +144,8 @@ func (s *service) Run(spec ExecSpec) (_ compsem.SemRef, err error) {
 		assetQNs = append(assetQNs, assetVar.TermQN)
 	}
 	var assetExecs map[uniqsym.ADT]ExecSnap1
-	getErr2 := s.operator.Implicit(ctx, func(ds db.Source) error {
-		assetExecs, err = s.compExecRepo.GetSnapMapByQNs(ds, assetQNs)
+	getErr2 := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+		assetExecs, err = s.compExecRepo.GetSnapMapByQNs(uow, assetQNs)
 		return err
 	})
 	if getErr2 != nil {
@@ -187,20 +187,20 @@ func (s *service) Run(spec ExecSpec) (_ compsem.SemRef, err error) {
 			ExpVK:   expVK,
 		})
 	}
-	transactErr := s.operator.Explicit(ctx, func(ds db.Source) error {
-		err = s.implSemRepo.AddRec(ds, newImpl)
+	transactErr := s.transactor.ExplicitTx(ctx, func(uow db.UoW) error {
+		err = s.implSemRepo.AddRec(uow, newImpl)
 		if err != nil {
 			return err
 		}
-		err = s.compExecRepo.AddRec(ds, newExec)
+		err = s.compExecRepo.AddRec(uow, newExec)
 		if err != nil {
 			return err
 		}
-		err = s.compVarRepo.AddRecs(ds, append(newAssetVars, newLiabVar))
+		err = s.compVarRepo.AddRecs(uow, append(newAssetVars, newLiabVar))
 		if err != nil {
 			return err
 		}
-		return s.commExchRepo.AddRec(ds, newExch)
+		return s.commExchRepo.AddRec(uow, newExch)
 	})
 	if transactErr != nil {
 		s.log.Error("creation failed", specAttr)
@@ -215,8 +215,8 @@ func (s *service) Spawn(spec compstep.StepSpec) (_ compsem.SemRef, err error) {
 	refAttr := slog.Any("ref", spec.CompRef)
 	s.log.Debug("proc spawning started", refAttr, slog.Any("exp", spec.PoolExp))
 	newExec := proccompexec.ExecRec{CompRef: compsem.New(), LiabMode: compvar.LinearMode}
-	transactErr := s.operator.Explicit(ctx, func(ds db.Source) error {
-		return s.procExecRepo.AddRec(ds, newExec)
+	transactErr := s.transactor.ExplicitTx(ctx, func(uow db.UoW) error {
+		return s.procExecRepo.AddRec(uow, newExec)
 	})
 	if transactErr != nil {
 		s.log.Error("proc spawning failed", refAttr)
@@ -240,20 +240,20 @@ func (s *service) Take(spec compstep.StepSpec) (err error) {
 		s.log.Error("step taking failed", refAttr)
 		return takeErr
 	}
-	transactErr := s.operator.Explicit(ctx, func(ds db.Source) error {
-		err = s.commTurnRepo.AddRecs(ds, exchMod.Turns)
+	transactErr := s.transactor.ExplicitTx(ctx, func(uow db.UoW) error {
+		err = s.commTurnRepo.AddRecs(uow, exchMod.Turns)
 		if err != nil {
 			return err
 		}
-		err = s.commExchRepo.ModifyRec(ds, exchMod)
+		err = s.commExchRepo.ModifyRec(uow, exchMod)
 		if err != nil {
 			return err
 		}
-		err = s.compVarRepo.AddRecs(ds, execMod.Vars)
+		err = s.compVarRepo.AddRecs(uow, execMod.Vars)
 		if err != nil {
 			return err
 		}
-		return s.compSemRepo.TouchRef(ds, execSnap.CompRef)
+		return s.compSemRepo.TouchRef(uow, execSnap.CompRef)
 	})
 	if transactErr != nil {
 		s.log.Error("step taking failed", refAttr)
@@ -296,8 +296,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -385,8 +385,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -474,8 +474,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -562,8 +562,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -650,8 +650,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -722,8 +722,8 @@ func (s *service) take(
 		nextExpVK := typeExp.(typeexp.ProdRec).Next()
 		// получаем снепшот коммуникации
 		var commSnap commexch.ExchSnap
-		getErr := s.operator.Implicit(ctx, func(ds db.Source) error {
-			commSnap, err = s.commExchRepo.GetSnapByQry(ds, commexch.ExchQry{
+		getErr := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+			commSnap, err = s.commExchRepo.GetSnapByQry(uow, commexch.ExchQry{
 				CommRef: commChnl.CommRef,
 				ChnlID:  option.Some(commChnl.ChnlID),
 			})
@@ -787,8 +787,8 @@ func (s *service) take(
 func (s *service) retrieveSnap(ref compsem.SemRef) (_ ExecSnap3, err error) {
 	ctx := context.Background()
 	var execSnap ExecSnap2
-	getErr1 := s.operator.Implicit(ctx, func(ds db.Source) error {
-		execSnap, err = s.compExecRepo.GetSnapByRef(ds, ref)
+	getErr1 := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+		execSnap, err = s.compExecRepo.GetSnapByRef(uow, ref)
 		return err
 	})
 	if getErr1 != nil {
@@ -796,12 +796,12 @@ func (s *service) retrieveSnap(ref compsem.SemRef) (_ ExecSnap3, err error) {
 	}
 	var structExps map[symbol.ADT]typeexp.ExpRec
 	var linearExps map[symbol.ADT]typeexp.ExpRec
-	getErr2 := s.operator.Implicit(ctx, func(ds db.Source) error {
-		structExps, err = s.typeExpRepo.GetRecMap(ds, ExtractExpVKs(execSnap.StructVars))
+	getErr2 := s.transactor.ImplicitTx(ctx, func(uow db.UoW) error {
+		structExps, err = s.typeExpRepo.GetRecMap(uow, ExtractExpVKs(execSnap.StructVars))
 		if err != nil {
 			return err
 		}
-		linearExps, err = s.typeExpRepo.GetRecMap(ds, ExtractExpVKs(execSnap.LinearVars))
+		linearExps, err = s.typeExpRepo.GetRecMap(uow, ExtractExpVKs(execSnap.LinearVars))
 		return err
 	})
 	if getErr2 != nil {

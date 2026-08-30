@@ -7,11 +7,11 @@ import (
 var Module = fx.Module("proc/compexec",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newEchoController,
+		newControllerEcho,
 		fx.Annotate(newSQLBuilder, fx.As(new(queryBuilder))),
 	),
 	fx.Invoke(

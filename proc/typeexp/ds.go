@@ -7,10 +7,10 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, ExpRec) error
-	SelectRecByVK(db.Source, valkey.ADT) (ExpRec, error)
-	SelectRecsByVKs(db.Source, []valkey.ADT) ([]ExpRec, error)
-	SelectEnv(db.Source, []valkey.ADT) (map[valkey.ADT]ExpRec, error)
+	AddRec(db.UoW, ExpRec) error
+	SelectRecByVK(db.UoW, valkey.ADT) (ExpRec, error)
+	SelectRecsByVKs(db.UoW, []valkey.ADT) ([]ExpRec, error)
+	SelectEnv(db.UoW, []valkey.ADT) (map[valkey.ADT]ExpRec, error)
 }
 
 type expKindDS int

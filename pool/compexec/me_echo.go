@@ -15,24 +15,24 @@ import (
 )
 
 // Server-side primary adapter
-type echoController struct {
+type controllerEcho struct {
 	api API
 	log *slog.Logger
 }
 
-func newEchoController(api API, log *slog.Logger) *echoController {
-	name := slog.String("name", reflect.TypeFor[echoController]().Name())
-	return &echoController{api, log.With(name)}
+func newControllerEcho(api API, log *slog.Logger) *controllerEcho {
+	name := slog.String("name", reflect.TypeFor[controllerEcho]().Name())
+	return &controllerEcho{api, log.With(name)}
 }
 
-func cfgEchoController(server *echo.Echo, controller *echoController) error {
+func cfgEchoController(server *echo.Echo, controller *controllerEcho) error {
 	server.POST("/api/v1/pools/execs", controller.PostSpec)
 	server.POST("/api/v1/pools/execs/steps", controller.PostSpec2)
 	server.POST("/api/v1/pools/execs/spawns", controller.PostSpec3)
 	return nil
 }
 
-func (c *echoController) PostSpec(ctx echo.Context) error {
+func (c *controllerEcho) PostSpec(ctx echo.Context) error {
 	var dto compexec.ExecSpec
 	bindErr := ctx.Bind(&dto)
 	if bindErr != nil {
@@ -56,7 +56,7 @@ func (c *echoController) PostSpec(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, compsem.MsgFromRef(ref))
 }
 
-func (c *echoController) PostSpec2(ctx echo.Context) error {
+func (c *controllerEcho) PostSpec2(ctx echo.Context) error {
 	var dto sdk.StepSpec
 	bindErr := ctx.Bind(&dto)
 	if bindErr != nil {
@@ -80,7 +80,7 @@ func (c *echoController) PostSpec2(ctx echo.Context) error {
 	return ctx.NoContent(http.StatusNoContent)
 }
 
-func (c *echoController) PostSpec3(ctx echo.Context) error {
+func (c *controllerEcho) PostSpec3(ctx echo.Context) error {
 	var dto sdk.StepSpec
 	bindErr := ctx.Bind(&dto)
 	if bindErr != nil {

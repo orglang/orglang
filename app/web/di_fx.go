@@ -10,7 +10,7 @@ var Module = fx.Module("app/web",
 	fx.Provide(
 		fx.Private,
 		fx.Annotate(newRendererStdlib, fx.As(new(te.Renderer))),
-		newEchoController,
+		newControllerEcho,
 	),
 	fx.Invoke(
 		cfgEchoController,

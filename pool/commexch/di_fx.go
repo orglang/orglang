@@ -6,7 +6,7 @@ import (
 
 var Module = fx.Module("pool/commexch",
 	fx.Provide(
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,

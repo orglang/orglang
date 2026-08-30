@@ -32,9 +32,9 @@ type DefSnap struct {
 }
 
 type service struct {
-	procDefs Repo
-	operator db.Operator
-	log      *slog.Logger
+	procDefs   Repo
+	transactor db.Transactor
+	log        *slog.Logger
 }
 
 // for compilation purposes
@@ -44,10 +44,10 @@ func newAPI() API {
 
 func newService(
 	procs Repo,
-	operator db.Operator,
-	l *slog.Logger,
+	transactor db.Transactor,
+	log *slog.Logger,
 ) *service {
-	return &service{procs, operator, l}
+	return &service{procs, transactor, log}
 }
 
 func (s *service) Create(spec DefSpec) (typesem.SemRef, error) {

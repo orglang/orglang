@@ -7,8 +7,8 @@ import (
 )
 
 type Repo interface {
-	TouchRef(db.Source, SemRef) error
-	GetRefsByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]SemRef, error)
+	TouchRef(db.UoW, SemRef) error
+	GetRefsByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]SemRef, error)
 }
 
 type SemRefDS struct {

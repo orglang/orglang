@@ -10,10 +10,10 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, ExchRec) error
-	ModifyRec(db.Source, ExchMod) error
-	GetRefsByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error)
-	GetSnapByQry(db.Source, ExchQry) (ExchSnap, error)
+	AddRec(db.UoW, ExchRec) error
+	ModifyRec(db.UoW, ExchMod) error
+	GetRefsByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error)
+	GetSnapByQry(db.UoW, ExchQry) (ExchSnap, error)
 }
 
 type exchRecDS struct {

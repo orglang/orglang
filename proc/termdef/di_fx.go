@@ -6,6 +6,6 @@ import (
 
 var Module = fx.Module("proc/termdef",
 	fx.Provide(
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 )

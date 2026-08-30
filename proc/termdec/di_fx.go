@@ -10,15 +10,15 @@ import (
 var Module = fx.Module("proc/termdec",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newEchoController,
+		newControllerEcho,
 		newEchoPresenter,
 		fx.Annotate(newSQLBuilder, fx.As(new(queryBuilder))),
 		fx.Annotate(newRendererStdlib, fx.As(new(te.Renderer))),
-		fx.Annotate(typesem.NewPgxDAO(typeDefs, descBinds), fx.As(new(typesem.Repo))),
+		fx.Annotate(typesem.NewDaoPgx(typeDefs, descBinds), fx.As(new(typesem.Repo))),
 	),
 	fx.Invoke(
 		cfgEchoController,

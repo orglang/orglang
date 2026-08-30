@@ -5,7 +5,7 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, SemRec) error
+	AddRec(db.UoW, SemRec) error
 }
 
 type SemRecDS struct {

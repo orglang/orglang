@@ -39,7 +39,7 @@ type service struct {
 	typeDefRepo Repo
 	typeExpRepo typeexp.Repo
 	descSemRepo descsem.Repo
-	operator    db.Operator
+	transactor  db.Transactor
 	log         *slog.Logger
 }
 
@@ -52,10 +52,10 @@ func newService(
 	typeDefRepo Repo,
 	typeExpRepo typeexp.Repo,
 	descSemRepo descsem.Repo,
-	operator db.Operator,
+	transactor db.Transactor,
 	log *slog.Logger,
 ) *service {
-	return &service{typeDefRepo, typeExpRepo, descSemRepo, operator, log}
+	return &service{typeDefRepo, typeExpRepo, descSemRepo, transactor, log}
 }
 
 func (s *service) Create(spec DefSpec) (_ typesem.SemRef, err error) {
@@ -68,16 +68,16 @@ func (s *service) Create(spec DefSpec) (_ typesem.SemRef, err error) {
 	}
 	newDef := DefRec{TypeRef: typesem.New(), ExpVK: newExp.Key()}
 	newBind := descsem.SemRec{DescQN: spec.TypeQN, DescID: newDef.TypeRef.TypeID, Kind: descsem.TypeKind}
-	transactErr := s.operator.Explicit(ctx, func(ds db.Source) error {
-		err = s.descSemRepo.AddRec(ds, newBind)
+	transactErr := s.transactor.ExplicitTx(ctx, func(uow db.UoW) error {
+		err = s.descSemRepo.AddRec(uow, newBind)
 		if err != nil {
 			return err
 		}
-		err = s.typeExpRepo.AddRec(ds, newExp, newDef.TypeRef)
+		err = s.typeExpRepo.AddRec(uow, newExp, newDef.TypeRef)
 		if err != nil {
 			return err
 		}
-		return s.typeDefRepo.AddRec(ds, newDef)
+		return s.typeDefRepo.AddRec(uow, newDef)
 	})
 	if transactErr != nil {
 		s.log.Error("creation failed", qnAttr)

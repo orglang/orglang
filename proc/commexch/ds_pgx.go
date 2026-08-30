@@ -8,32 +8,32 @@ import (
 	"reflect"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	log *slog.Logger
 }
 
-func newPgxDAO(log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{log.With(name)}
+func newDaoPgx(log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(db.Source, ExchRec) error {
+func (dao *daoPgx) AddRec(db.UoW, ExchRec) error {
 	panic("unimplemented")
 }
 
-func (dao *pgxDAO) GetRefsByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error) {
+func (dao *daoPgx) GetRefsByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error) {
 	panic("unimplemented")
 }
 
-func (dao *pgxDAO) GetSnapByQry(db.Source, ExchQry) (ExchSnap, error) {
+func (dao *daoPgx) GetSnapByQry(db.UoW, ExchQry) (ExchSnap, error) {
 	panic("unimplemented")
 }
 
-func (dao *pgxDAO) Modifyec(db.Source, ExchMod) error {
+func (dao *daoPgx) Modifyec(db.UoW, ExchMod) error {
 	panic("unimplemented")
 }

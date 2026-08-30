@@ -5,7 +5,7 @@ import (
 )
 
 type Repo interface {
-	TouchRef(db.Source, SemRef) error
+	TouchRef(db.UoW, SemRef) error
 }
 
 type SemRefDS struct {

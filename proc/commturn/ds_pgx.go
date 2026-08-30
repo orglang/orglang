@@ -13,22 +13,21 @@ import (
 	"orglang/go-engine/adt/identity"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	log *slog.Logger
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func newPgxDAO(l *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{l.With(name)}
+func newDaoPgx(l *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{l.With(name)}
 }
 
-func (dao *pgxDAO) InsertRecs(source db.Source, recs ...TurnRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) InsertRecs(uow db.UoW, recs ...TurnRec) error {
 	dtos, err := DataFromStepRecs(recs)
 	if err != nil {
 		dao.log.Error("conversion failed")
@@ -44,7 +43,7 @@ func (dao *pgxDAO) InsertRecs(source db.Source, recs ...TurnRec) error {
 		}
 		batch.Queue(insertStep, args)
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -60,18 +59,17 @@ func (dao *pgxDAO) InsertRecs(source db.Source, recs ...TurnRec) error {
 	return nil
 }
 
-func (dao *pgxDAO) SelectRecs(source db.Source, rid identity.ADT) (TurnRec, error) {
+func (dao *daoPgx) SelectRecs(uow db.UoW, rid identity.ADT) (TurnRec, error) {
 	query := `
 		select
 			id, kind, pid, vid, spec
 		from steps
 		WHERE id = $1`
-	return dao.execute(source, query, rid.String())
+	return dao.execute(uow, query, rid.String())
 }
 
-func (dao *pgxDAO) execute(source db.Source, query string, arg string) (TurnRec, error) {
-	ds := db.MustConform[db.SourcePgx](source)
-	rows, err := ds.Conn.Query(ds.Ctx, query, arg)
+func (dao *daoPgx) execute(uow db.UoW, query string, arg string) (TurnRec, error) {
+	rows, err := uow.Pgx.Query(uow.Ctx, query, arg)
 	if err != nil {
 		dao.log.Error("query execution failed", slog.String("q", query))
 		return nil, err
@@ -90,7 +88,7 @@ func (dao *pgxDAO) execute(source db.Source, query string, arg string) (TurnRec,
 		dao.log.Error("model conversion failed")
 		return nil, err
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "entity selection succeed", slog.Any("root", root))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "entity selection succeed", slog.Any("root", root))
 	return root, nil
 }
 

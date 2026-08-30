@@ -15,44 +15,42 @@ import (
 	"orglang/go-engine/adt/uniqsym"
 )
 
-type pgxDAO struct {
+type daoPgx struct {
 	qb  queryBuilder
 	log *slog.Logger
 }
 
-func newPgxDAO(qb queryBuilder, log *slog.Logger) *pgxDAO {
-	name := slog.String("name", reflect.TypeFor[pgxDAO]().Name())
-	return &pgxDAO{qb, log.With(name)}
+func newDaoPgx(qb queryBuilder, log *slog.Logger) *daoPgx {
+	name := slog.String("name", reflect.TypeFor[daoPgx]().Name())
+	return &daoPgx{qb, log.With(name)}
 }
 
 // for compilation purposes
 func newRepo() Repo {
-	return new(pgxDAO)
+	return new(daoPgx)
 }
 
-func (dao *pgxDAO) AddRec(source db.Source, rec ExecRec) error {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) AddRec(uow db.UoW, rec ExecRec) error {
 	dto := DataFromExecRec(rec)
 	refAttr := slog.Any("ref", rec.CompRef)
 	sql, args := dao.qb.insertRec(dto)
-	_, execErr := ds.Conn.Exec(ds.Ctx, sql, args...)
+	_, execErr := uow.Pgx.Exec(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return execErr
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "addition succeed", slog.Any("dto", dto))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "addition succeed", slog.Any("dto", dto))
 	return nil
 }
 
-func (dao *pgxDAO) ModifyRec(db.Source, ExecMod) error {
+func (dao *daoPgx) ModifyRec(db.UoW, ExecMod) error {
 	panic("unimplemented")
 }
 
-func (dao *pgxDAO) GetSnapByRef(source db.Source, ref compsem.SemRef) (ExecSnap2, error) {
-	ds := db.MustConform[db.SourcePgx](source)
+func (dao *daoPgx) GetSnapByRef(uow db.UoW, ref compsem.SemRef) (ExecSnap2, error) {
 	refAttr := slog.Any("ref", ref)
 	sql, args := dao.qb.selectRecByRef(compsem.DataFromRef(ref))
-	rows, execErr := ds.Conn.Query(ds.Ctx, sql, args...)
+	rows, execErr := uow.Pgx.Query(uow.Ctx, sql, args...)
 	if execErr != nil {
 		dao.log.Error("query execution failed", refAttr, slog.String("sql", sql))
 		return ExecSnap2{}, execErr
@@ -63,7 +61,7 @@ func (dao *pgxDAO) GetSnapByRef(source db.Source, ref compsem.SemRef) (ExecSnap2
 		dao.log.Error("rows scanning failed", refAttr, slog.Any("dto", dto))
 		return ExecSnap2{}, scanErr
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dto", dto))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dto", dto))
 	rec, convErr := DataToExecSnap2(dto)
 	if convErr != nil {
 		dao.log.Error("model conversion failed", refAttr)
@@ -72,9 +70,8 @@ func (dao *pgxDAO) GetSnapByRef(source db.Source, ref compsem.SemRef) (ExecSnap2
 	return rec, nil
 }
 
-func (dao *pgxDAO) GetSnapMapByQNs(source db.Source, termQNs []uniqsym.ADT) (_ map[uniqsym.ADT]ExecSnap1, err error) {
-	ds := db.MustConform[db.SourcePgx](source)
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting started", slog.Any("qns", termQNs))
+func (dao *daoPgx) GetSnapMapByQNs(uow db.UoW, termQNs []uniqsym.ADT) (_ map[uniqsym.ADT]ExecSnap1, err error) {
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "getting started", slog.Any("qns", termQNs))
 	if len(termQNs) == 0 {
 		return map[uniqsym.ADT]ExecSnap1{}, nil
 	}
@@ -83,7 +80,7 @@ func (dao *pgxDAO) GetSnapMapByQNs(source db.Source, termQNs []uniqsym.ADT) (_ m
 		sql, args := dao.qb.selectSnapByQN(uniqsym.ConvertToString(termQN))
 		batch.Queue(sql, args...)
 	}
-	br := ds.Conn.SendBatch(ds.Ctx, &batch)
+	br := uow.Pgx.SendBatch(uow.Ctx, &batch)
 	defer func() {
 		err = errors.Join(err, br.Close())
 	}()
@@ -103,6 +100,6 @@ func (dao *pgxDAO) GetSnapMapByQNs(source db.Source, termQNs []uniqsym.ADT) (_ m
 		}
 		dtos[termQN] = dto
 	}
-	dao.log.Log(ds.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dtos", dtos))
+	dao.log.Log(uow.Ctx, lf.LevelTrace, "getting succeed", slog.Any("dtos", dtos))
 	return DataToSnapMap(dtos)
 }

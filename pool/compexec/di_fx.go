@@ -10,17 +10,17 @@ import (
 var Module = fx.Module("pool/compexec",
 	fx.Provide(
 		fx.Annotate(newService, fx.As(new(API))),
-		fx.Annotate(newPgxDAO, fx.As(new(Repo))),
+		fx.Annotate(newDaoPgx, fx.As(new(Repo))),
 	),
 	fx.Provide(
 		fx.Private,
-		newEchoController,
+		newControllerEcho,
 		newPondBroker,
 		fx.Annotate(newPondBroker, fx.As(new(Broker))),
 		// fx.Annotate(newWorkerPoolBroker, fx.As(new(Exch))),
 		fx.Annotate(newSQLBuilder, fx.As(new(queryBuilder))),
-		fx.Annotate(implsem.NewPgxDAO(implBinds), fx.As(new(implsem.Repo))),
-		fx.Annotate(compsem.NewPgxDAO(compExecs), fx.As(new(compsem.Repo))),
+		fx.Annotate(implsem.NewDaoPgx(implBinds), fx.As(new(implsem.Repo))),
+		fx.Annotate(compsem.NewDaoPgx(compExecs), fx.As(new(compsem.Repo))),
 	),
 	fx.Invoke(
 		cfgEchoController,

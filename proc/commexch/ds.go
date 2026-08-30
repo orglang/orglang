@@ -8,8 +8,8 @@ import (
 )
 
 type Repo interface {
-	AddRec(db.Source, ExchRec) error
-	Modifyec(db.Source, ExchMod) error
-	GetRefsByQNs(db.Source, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error)
-	GetSnapByQry(db.Source, ExchQry) (ExchSnap, error)
+	AddRec(db.UoW, ExchRec) error
+	Modifyec(db.UoW, ExchMod) error
+	GetRefsByQNs(db.UoW, []uniqsym.ADT) (map[uniqsym.ADT]commsem.SemRef, error)
+	GetSnapByQry(db.UoW, ExchQry) (ExchSnap, error)
 }
