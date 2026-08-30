@@ -4,50 +4,50 @@ import (
 	"orglang/go-engine/lib/kv"
 )
 
-func newStorageCS(l kv.Loader) (storageCS, error) {
-	dto := new(storageCS)
-	loadingErr := l.Load("storage", dto)
-	if loadingErr != nil {
-		return storageCS{}, loadingErr
+func newStorageProps(l kv.Loader) (storageProps, error) {
+	dto := new(storageProps)
+	loadErr := l.Load("storage", dto)
+	if loadErr != nil {
+		return storageProps{}, loadErr
 	}
 	validateErr := dto.Validate()
 	if validateErr != nil {
-		return storageCS{}, validateErr
+		return storageProps{}, validateErr
 	}
 	return *dto, nil
 }
 
-type storageCS struct {
-	Protocol protocolCS `mapstructure:"protocol"`
-	Driver   driverCS   `mapstructure:"driver"`
+type storageProps struct {
+	Protocol protoProps  `mapstructure:"protocol"`
+	Driver   driverProps `mapstructure:"driver"`
 }
 
-type protocolCS struct {
-	Mode     protoModeCS `mapstructure:"mode"`
-	Postgres postgresCS  `mapstructure:"postgres"`
+type protoProps struct {
+	Mode     protoMode     `mapstructure:"mode"`
+	Postgres postgresProps `mapstructure:"postgres"`
 }
 
-type driverCS struct {
-	Mode driverModeCS `mapstructure:"mode"`
-	Pgx  pgxCS        `mapstructure:"pgx"`
+type driverProps struct {
+	Mode driverMode `mapstructure:"mode"`
+	Pgx  pgxProps   `mapstructure:"pgx"`
 }
 
-type postgresCS struct {
+type postgresProps struct {
 	URL string `mapstructure:"url"`
 }
 
-type pgxCS struct {
+type pgxProps struct {
 	MaxConns uint16 `mapstructure:"max_conns"`
 }
 
-type protoModeCS string
+type protoMode string
 
 const (
-	postgresProto protoModeCS = "postgres"
+	postgresMode protoMode = "postgres"
 )
 
-type driverModeCS string
+type driverMode string
 
 const (
-	pgxDriver driverModeCS = "pgx"
+	pgxMode driverMode = "pgx"
 )

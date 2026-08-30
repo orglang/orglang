@@ -6,11 +6,10 @@ import (
 
 var Module = fx.Module("lib/db",
 	fx.Provide(
-		newPoolPgx,
-		fx.Annotate(newTransactorPgx, fx.As(new(Transactor))),
+		newTransactor,
 	),
 	fx.Provide(
 		fx.Private,
-		newStorageCS,
+		newStorageProps,
 	),
 )
