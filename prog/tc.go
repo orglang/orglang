@@ -5,7 +5,7 @@ import (
 )
 
 func msgFromText(text string) (SpecME, error) {
-	parser, buildErr := participle.Build[SpecME]()
+	parser, buildErr := participle.Build[SpecME](participle.UseLookahead(100))
 	if buildErr != nil {
 		return SpecME{}, buildErr
 	}
